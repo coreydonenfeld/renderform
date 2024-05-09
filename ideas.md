@@ -1,5 +1,11 @@
 https://blog.ayoungprogrammer.com/2013/01/equation-ocr-part-2-training-characters.html
 https://github.com/floneum/floneum/blob/main/models/kalosm-ocr/examples/ocr.rs
+https://github.com/stevenobadja/math_object_detection?tab=readme-ov-file
+https://arxiv.org/pdf/1003.5898
+https://groups.google.com/g/tesseract-ocr/c/lvr_xaSuSe0
+https://www.youtube.com/watch?v=a5oeEhTf6_M
+
+Pearson. (2020, August). Aida Calculus Math Handwriting Recognition Dataset. Retrieved [Date Retrieved] from https://www.kaggle.com/aidapearson/ocr-data.
 
 - set bounding boxes for each line, which will be an equation
 - within the line, bound each character. map it to a ASCII character
