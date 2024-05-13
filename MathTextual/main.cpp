@@ -2,9 +2,11 @@
 #include <iostream>
 #include <leptonica/allheaders.h>
 #include <opencv2/core.hpp>
+#include <opencv2/core/matx.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/photo.hpp>
 #include <tesseract/baseapi.h>
 
 #define TESSERACT_OUTPUT_FILE "output.txt"
@@ -21,20 +23,151 @@ int main(int argc, char **argv) {
               << std::endl;
     exit(EXIT_FAILURE);
   }
-  cv::Mat imageCopy = image.clone();
+  cv::Mat image_copy = image.clone();
 
   // Convert the input image to grayscale
   cv::Mat grayscale;
   cv::cvtColor(image, grayscale, cv::COLOR_BGR2GRAY);
 
-  // Apply Canny edge detection
-  cv::Mat edges;
-  cv::Canny(grayscale, edges, 200, 250); // Adjust thresholds as needed
+  // Get average color of the image
+  cv::Scalar avg_color = cv::mean(grayscale);
+  std::cout << "Average color: " << avg_color << std::endl;
+
+  cv::imshow("Grayscale", grayscale);
+  cv::waitKey(0);
+
+  // threshold the image based on the average color
+  cv::threshold(grayscale, grayscale, avg_color[0], 255,
+                cv::THRESH_BINARY | cv::THRESH_OTSU);
+
+  // Get the connected components of the image
+  cv::Mat grayscale_labels, grayscale_stats, grayscale_centroids;
+  int grayscale_components = cv::connectedComponentsWithStats(
+      grayscale, grayscale_labels, grayscale_stats, grayscale_centroids);
+
+  for (int i = 1; i < grayscale_components; i++) {
+    std::cout << "Component " << i << " stats: " << grayscale_stats.row(i)
+              << std::endl;
+  }
+
+  cv::imshow("Thresholded", grayscale);
+  cv::waitKey(0);
+
+  // cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+  // cv::morphologyEx(grayscale, grayscale, cv::MORPH_CLOSE, kernel);
+
+  // Grayscale contours
+  cv::Mat shapes_contours = cv::Mat::zeros(grayscale.size(), CV_8UC1);
+  std::vector<std::vector<cv::Point>> grayscale_contours;
+  cv::findContours(grayscale, grayscale_contours, cv::RETR_TREE,
+                   cv::CHAIN_APPROX_SIMPLE);
+  cv::drawContours(shapes_contours, grayscale_contours, -1, cv::Scalar(255), 2);
+
+  cv::imshow("Grayscale Contours", shapes_contours);
+  cv::waitKey(0);
+
+  // Separate the foreground from the background
+  cv::Mat foreground; // Pen/pencil characters
+  cv::Mat background; // Lines, paper, edges, noise, etc.
+
+  // We need to separate the foreground from the background
+
+  // Before thresholding, remove straight horizontal lines >70% of the width of
+  // the image
+  // Step 1: Apply a horizontal kernel to the image
+  // Step 2: Apply a morphological operation to remove the horizontal lines
+
+  cv::Mat horizontal_kernel =
+      cv::getStructuringElement(cv::MORPH_RECT, cv::Size(8, 1));
+
+  cv::Mat vertical_kernel =
+      cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 6));
+
+  cv::dilate(grayscale, background, horizontal_kernel, cv::Point(-1, -1), 1);
+  cv::dilate(background, background, horizontal_kernel, cv::Point(-1, -1), 2);
+
+  // cv::morphologyEx(background, background, cv::MORPH_DILATE,
+  // horizontal_kernel); cv::morphologyEx(background, background,
+  // cv::MORPH_CLOSE, horizontal_kernel);
+
+  // cv::dilate(background, background, horizontal_kernel, cv::Point(-1, -1),
+  // 1); cv::erode(background, background, horizontal_kernel, cv::Point(-1, -1),
+  // 1);
+
+  // subtract background from the original image
+  cv::subtract(background, grayscale, foreground);
+
+  cv::threshold(foreground, foreground, 40, 255, cv::THRESH_BINARY_INV);
+  cv::GaussianBlur(foreground, foreground, cv::Size(5, 5), 0, 13);
+  cv::threshold(foreground, foreground, 0, 255, cv::THRESH_OTSU);
+
+  cv::Mat image_edges;
+  cv::Canny(foreground, image_edges, 50, 150, 3);
+
+  cv::Mat image_window_display;
+
+  // cv::namedWindow("Input Image Grayscale", cv::WINDOW_NORMAL);
+  // cv::imshow("Input Image Grayscale", grayscale);
+  // cv::imshow("Horizontal Lines", image_edges);
+  // cv::imshow("Foreground", foreground);
+  // cv::imshow("Background", background);
+  // cv::resizeWindow("Input Image Grayscale", 800, 800);
+  // cv::waitKey(0);
+
+  // Check for VERY straight horizontal lines (i.e. the paper edge or lines on
+  // paper as opposed to actual text)
+
+  // check for continuous straight lines that span approx the width of the image
+  // (or > 75% of the width of the image) if found, then it's likely a paper
+  // edge or a line on the paper if found, then remove it from the image
+
+  // cv::waitKey(0);
+
+  // apply gaussian blur to remove noise
+  // cv::GaussianBlur(grayscale, grayscale, cv::Size(9, 9), 1, 3);
+
+  // cv::imshow("Gaussian Blur", grayscale);
+  // cv::waitKey(0);
+
+  // Pen/pencil should be the darkest object in the image
+  // Let's find the darkest pixel in the image and then see what that looks like
+  // to determine the threshold
+  double minVal, maxVal;
+  cv::Point minLoc, maxLoc;
+  cv::minMaxLoc(grayscale, &minVal, &maxVal);
+
+  cv::Mat thresholded;
+  // cv::threshold(grayscale, thresholded, minVal + 60, 255,
+  //               cv::THRESH_BINARY | cv::THRESH_OTSU);
+  // cv::adaptiveThreshold(grayscale, thresholded, 255,
+  //                       cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
+  //                       37, (maxVal - minVal) / 4);
+
+  // cv::imshow("Thresholded", thresholded);
+  // cv::waitKey(0);
+
+  // std::cout << "Min Value: " << minVal << std::endl;
+  // std::cout << "Max Value: " << maxVal << std::endl;
 
   // Perform dilation and erosion to enhance edges
   cv::Mat dilated_edges, eroded_edges;
-  // cv::dilate(edges, dilated_edges, cv::Mat(), cv::Point(-1, -1), 0);
-  // cv::erode(dilated_edges, eroded_edges, cv::Mat(), cv::Point(-1, -1), 0);
+  // cv::dilate(thresholded, dilated_edges, cv::Mat(), cv::Point(-1, -1), 1);
+  // cv::erode(grayscale, eroded_edges, cv::Mat(), cv::Point(-1, -1), 1);
+
+  // cv::imshow("Dilated Edges", eroded_edges);
+  // cv::waitKey(0);
+
+  cv::threshold(grayscale, thresholded, minVal, 255,
+                cv::THRESH_BINARY | cv::THRESH_OTSU);
+  // cv::adaptiveThreshold(eroded_edges, thresholded, 255,
+  //                       cv::ADAPTIVE_THRESH_GAUSSIAN_C, cv::THRESH_BINARY,
+  //                       37, (maxVal - minVal) / 4);
+  cv::imshow("Thresholded", thresholded);
+  cv::waitKey(0);
+
+  // Apply Canny edge detection
+  cv::Mat edges;
+  cv::Canny(thresholded, edges, 200, 250); // Adjust thresholds as needed
 
   cv::imshow("Edges", edges);
   cv::waitKey(0);
@@ -48,10 +181,10 @@ int main(int argc, char **argv) {
   tesseract::TessBaseAPI tess;
   tess.Init(NULL, "eng", tesseract::OEM_LSTM_ONLY);
   tess.SetPageSegMode(tesseract::PSM_SINGLE_CHAR);
-  tess.SetVariable("classify_bln_numeric_mode", "1");
+  // tess.SetVariable("classify_bln_numeric_mode", "1");
 
   // whitelist digits and operators
-  tess.SetVariable("tessedit_char_whitelist", "0123456789+-*/=x");
+  tess.SetVariable("tessedit_char_whitelist", "0123456789=+-*/xyzXYZ");
   // tess.SetVariable("tessedit_char_whitelist", "+-=-~—x*•");
   // tess.SetVariable("user_defined_dpi", "300");
   // tess.SetVariable("matcher_good_threshold", "0");
@@ -90,6 +223,9 @@ int main(int argc, char **argv) {
                   stats.at<int>(i, cv::CC_STAT_WIDTH),
                   stats.at<int>(i, cv::CC_STAT_HEIGHT));
 
+    // draw box on original image for demo
+    cv::rectangle(image, bbox, cv::Scalar(0, 255, 0), 2);
+
     // create new tmp image that is the bounding box of the connected component
     // + padding to draw the shape in the center
     cv::Mat character = cv::Mat::zeros(bbox.height + 2 * PADDING,
@@ -106,6 +242,48 @@ int main(int argc, char **argv) {
     cv::threshold(character, character_thresholded, 0, 255,
                   cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
 
+    cv::erode(character_thresholded, character_thresholded, cv::Mat(),
+              cv::Point(-1, -1), 1);
+
+    // get contours of the connected component
+    std::vector<std::vector<cv::Point>> character_contours;
+    cv::findContours(character_thresholded, character_contours, cv::RETR_TREE,
+                     cv::CHAIN_APPROX_SIMPLE);
+
+    if (character_contours.size() == 0) {
+      std::cout << "No contours found for component " << i << std::endl;
+      continue;
+    }
+
+    std::cout << "Number of contours: " << character_contours.size()
+              << std::endl;
+
+    cv::Mat character_demo;
+    // get contour of the shape not the bounding box
+    // make thresholded image rgb to draw contours
+    cv::cvtColor(character_thresholded, character_demo, cv::COLOR_GRAY2BGR);
+
+    // cv::drawContours(character_demo, character_contours, 1,
+    //                  cv::Scalar(0, 255, 0), -1);
+
+    // cv::drawContours(character_demo, character_contours, 2,
+    //                  cv::Scalar(0, 0, 255), 1);
+
+    cv::drawContours(character_thresholded, character_contours, 1,
+                     cv::Scalar(0), -1);
+
+    for (int j = 2; j < character_contours.size(); j++) {
+      cv::drawContours(character_thresholded, character_contours, j,
+                       cv::Scalar(0), 1);
+    }
+
+    // De-pixelate the character
+    // cv::GaussianBlur(character_thresholded, character_thresholded,
+    //                  cv::Size(13, 13), 0, 0);
+    // cv::erode(character_thresholded, character_thresholded, cv::Mat(),
+    //           cv::Point(-1, -1), 1);
+
+    // fill in outline to get a solid shape
     // Invert thresholded image
     // cv::bitwise_not(character_thresholded, character_thresholded);
 
@@ -116,34 +294,38 @@ int main(int argc, char **argv) {
         dilation_type, cv::Size(2 * dilation_size + 1, 2 * dilation_size + 1),
         cv::Point(dilation_size, dilation_size));
 
-    cv::erode(character_thresholded, character_thresholded, element,
-              cv::Point(-1, -1), 1);
-    cv::dilate(character_thresholded, character_thresholded, element,
-               cv::Point(-1, -1), 1);
+    // cv::erode(character_thresholded, character_thresholded, element,
+    //           cv::Point(-1, -1), 1);
+    // cv::dilate(character_thresholded, character_thresholded, element,
+    //            cv::Point(-1, -1), 1);
 
-    /*
     cv::imshow("Character Bounding Box " + std::to_string(i),
                character_thresholded);
     cv::waitKey(0);
-     */
 
     tess.SetImage(character_thresholded.data, character_thresholded.cols,
-                  character_thresholded.rows, 1, character_thresholded.step);
+                  character_thresholded.rows, 1, character_thresholded.cols);
+    tess.SetSourceResolution(70);
+
     tess.Recognize(0);
 
+    std::string recognizedChar;
     std::cout << "├┄┄ Tesseract OCR" << std::endl;
     if (tess.MeanTextConf() > 0) {
-      recognizedText = tess.GetUTF8Text();
+      recognizedChar = tess.GetUTF8Text();
       // remove newlines and other whitespace characters
-      recognizedText.erase(
-          std::remove_if(recognizedText.begin(), recognizedText.end(),
+      recognizedChar.erase(
+          std::remove_if(recognizedChar.begin(), recognizedChar.end(),
                          [](unsigned char x) { return std::isspace(x); }),
-          recognizedText.end());
-      std::cout << "│\t↳ Text: " << recognizedText << std::endl;
+          recognizedChar.end());
+      std::cout << "│\t↳ Text: " << recognizedChar << std::endl;
       std::cout << "│\t☑ Confidence: " << tess.MeanTextConf() << std::endl;
     } else {
       std::cout << "│\t☒ No text detected" << std::endl;
     }
+
+    recognizedText += recognizedChar;
+    recognizedText += " ";
 
     // Assuming the connected component is a single character, we can use the
     // properties of the character and do some non-OCR based determination below
@@ -292,15 +474,13 @@ int main(int argc, char **argv) {
     // demo_character_contours);
     // cv::waitKey(0);
 
-    recognizedText += tess.GetUTF8Text();
-
     // Draw bounding box around each component (for visualization)
     cv::rectangle(image, bbox, cv::Scalar(0, 0, 255), 1, cv::LINE_4);
   }
 
   // Display the result
-  // cv::imshow("Image with Characters", image);
-  // cv::waitKey(0);
+  cv::imshow("Image with Characters", image);
+  cv::waitKey(0);
   //
   // write to "output.txt"
   FILE *outputFile = fopen("output.txt", "w");

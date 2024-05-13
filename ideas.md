@@ -41,3 +41,20 @@ Pearson. (2020, August). Aida Calculus Math Handwriting Recognition Dataset. Ret
 
 - vector notation (→) (a vector with a variable inside; e.g., →x is really the vector x)
 - matrix notation ([, ]) (a matrix with variables inside; e.g., [x, y] is really the matrix x, y)
+
+
+-- At this point only characters (numbers, math symbols) are present in the image we are working with
+-- Segment by line, each object is assigned a line
+-- Use position and character value to recognize equals, multi-digit numbers (i.e., if 1 and 2 are together with no object in between and their distance is reasonably small they can be assumed to form ‘12’)
+-- Form math equation using LaTeX
+-- Generate an output image! (https://github.com/goldsborough/latexpp)
+
+Get contours of each numeric character
+# of contours is a very rough tell:
+1 contour: 1, 2, 3, 5, 7
+2 contours: 0, 4, 6, 9
+3 contours: 8
+Roundness
+Angle for adjustments
+# of edges
+# of corners
