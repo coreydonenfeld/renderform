@@ -2,8 +2,15 @@
 #define RENDERFORM_H
 
 #include "formula.hpp"
+#include <iostream>
+#include <opencv2/opencv.hpp>
+#include <string>
 
-namespace Renderform {};
+namespace Renderform {
+
+Formula parse(const std::string &image_path);
+
+}; // namespace Renderform
 
 #endif // RENDERFORM_H
 
@@ -16,5 +23,11 @@ f.checkAgainst("x^2 + y^2 = 1"); // returns true or false
 f.getFormula(); // returns the formula string
 f.toLatex(); // returns the formula in latex format
 Renderform::renderLatex(f.toLatex()); // renders the latex formula
+
+ahh also want to be able to compile a binary which expects command line
+arguments
+./renderform /path/to/img.png "x^2 + y^2 = 1" // returns true or false
+
+how do we do both?
 
 */
