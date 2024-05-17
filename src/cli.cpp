@@ -2,6 +2,7 @@
 // Uses the public API via the CLI
 //
 
+#include "formula.hpp"
 #include "renderform.hpp"
 #include <iostream>
 #include <string>
@@ -16,9 +17,26 @@ int main(int argc, char *argv[]) {
   }
 
   std::string input_file = argv[1];
-  Renderform::Formula output = Renderform::parse(input_file);
+  std::string user_formula;
 
-  std::cout << "Input file: " << input_file << std::endl;
+  // loop until user types "exit"
+
+  while (true) {
+    std::cout << "Enter the formula: ";
+    std::cin >> user_formula;
+    if (user_formula == "exit") {
+      break;
+    }
+    Renderform::Formula parsed_formula{user_formula,
+                                       Renderform::FormType::EQUATION};
+    std::cout << std::endl << "Parsed formula: " << std::endl;
+    parsed_formula.print();
+    std::cout << std::endl;
+  }
+
+  // Renderform::Formula output = Renderform::parse(input_file);
+
+  // std::cout << "Input file: " << input_file << std::endl;
 
   // cv::Mat image = cv::imread(argv[1], cv::IMREAD_COLOR);
   // if (image.empty()) {

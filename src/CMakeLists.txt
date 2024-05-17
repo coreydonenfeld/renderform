@@ -9,6 +9,7 @@ set(HEADER_FILES
 	modules/parser.hpp
 	modules/evaluator.hpp
 	modules/renderer.hpp
+	modules/character.hpp
 )
 set(SOURCE_FILES
 	renderform.cpp
@@ -20,6 +21,7 @@ set(SOURCE_FILES
 	modules/parser.cpp
 	modules/evaluator.cpp
 	modules/renderer.cpp
+	modules/character.cpp
 )
 
 add_executable(renderform ${HEADER_FILES} ${SOURCE_FILES})

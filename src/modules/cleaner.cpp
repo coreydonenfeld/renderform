@@ -16,16 +16,72 @@ easiest case)
 - There may be scratched out text
 - The background may include patterns or sketches that are not crucial to the
 image
-
-
-
 */
 
-namespace Mathic {
+#include "cleaner.hpp"
+#include <opencv2/imgproc.hpp>
 
-class Cleaner {
-public:
-private:
-};
+Renderform::Cleaner::Cleaner(cv::Mat *image) : source_image(image) {
+  cv::imshow("Original Image cleaning", *image);
+  cv::waitKey(0);
+  this->processed_image = cv::Mat{};
+}
 
-} // namespace Mathic
+Renderform::Cleaner::~Cleaner() {}
+
+void Renderform::Cleaner::process() {
+  /* Step 1: Convert to grayscale. */
+  cv::cvtColor(*(this->source_image), this->processed_image,
+               cv::COLOR_BGR2GRAY);
+
+  cv::imshow("Grayscale Image", this->processed_image);
+  cv::waitKey(0);
+
+  // Subtract blurred from grayscale
+  // cv::Mat blurred;
+  // cv::GaussianBlur(this->processed_image, blurred, cv::Size(7, 7), 4);
+  // cv::subtract(this->processed_image, blurred, this->processed_image);
+
+  // cv::subtract(blurred, this->processed_image, this->processed_image);
+
+  // cv::imshow("Blurred Image", blurred);
+  // cv::waitKey(0);
+
+  // /* Step 2: Detect and filter out noise from the background. */
+  cv::Mat structuring_element =
+      cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(13, 5));
+  // // ^^^ Mostly works but I need to understand what is happening
+  // cv::Mat background;
+  // cv::morphologyEx(this->processed_image, background, cv::MORPH_CLOSE,
+  //                  structuring_element);
+
+  // cv::threshold(background, background, 200, 255,
+  //               cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+
+  // cv::imshow("Background", background);
+  // cv::waitKey(0);
+
+  // // cv::divide(this->processed_image, background, this->processed_image,
+  // // 255.0);
+  // cv::subtract(background, this->processed_image, this->processed_image);
+  // // cv::subtract(this->processed_image, background, this->processed_image);
+
+  // cv::erode(this->processed_image, this->processed_image,
+  // structuring_element,
+  //           cv::Point(-1, -1), 2);
+
+  // cv::imshow("Dilated Image", this->processed_image);
+  // cv::waitKey(0);
+
+  /* Step 3: Threshold the image. */
+  cv::threshold(this->processed_image, this->processed_image, 90, 255,
+                cv::THRESH_BINARY_INV | cv::THRESH_OTSU);
+
+  // cv::adaptiveThreshold(this->processed_image, this->processed_image, 255,
+  //                       cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 39,
+  //                       13);
+}
+
+const cv::Mat Renderform::Cleaner::getProcessedImage() {
+  return this->processed_image;
+}
