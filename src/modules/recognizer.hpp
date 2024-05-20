@@ -26,6 +26,8 @@ public:
 
   std::string recognize(const Character &character);
 
+  // std::string recognize(const Line &line);
+
 private:
   tesseract::TessBaseAPI tesseract_api;
   std::string language;

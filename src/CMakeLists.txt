@@ -3,6 +3,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include/renderform)
 set(HEADER_FILES
 	${CMAKE_SOURCE_DIR}/include/renderform/renderform.hpp
 	${CMAKE_SOURCE_DIR}/include/renderform/formula.hpp
+	${CMAKE_SOURCE_DIR}/include/renderform/formtree.hpp
 	modules/cleaner.hpp
 	modules/partitioner.hpp
 	modules/recognizer.hpp
@@ -15,6 +16,7 @@ set(SOURCE_FILES
 	renderform.cpp
 	formula.cpp
 	cli.cpp
+	formtree.cpp
 	modules/cleaner.cpp
 	modules/partitioner.cpp
 	modules/recognizer.cpp

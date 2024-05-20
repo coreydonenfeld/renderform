@@ -1,10 +1,23 @@
 #include "partitioner.hpp"
 #include "character.hpp"
+#include <cmath>
 
 Renderform::Partitioner::Partitioner(cv::Mat *image)
     : source_binary_image(image) {}
 
 Renderform::Partitioner::~Partitioner() {}
+
+double Renderform::Partitioner::getArea(cv::Rect bbox) {
+  return bbox.width * bbox.height;
+}
+
+// double Renderform::Partitioner::getArea(cv::Mat image) {
+//   return cv::countNonZero(image);
+// }
+
+cv::Rect Renderform::Partitioner::getLargestCharacterBoundingBox() {
+  return this->largest_character_bbox;
+}
 
 void Renderform::Partitioner::process() {
   const int PADDING = 9;
@@ -24,6 +37,10 @@ void Renderform::Partitioner::process() {
                   stats.at<int>(i, cv::CC_STAT_WIDTH),
                   stats.at<int>(i, cv::CC_STAT_HEIGHT));
 
+    if (getArea(bbox) > getArea(this->largest_character_bbox)) {
+      this->largest_character_bbox = bbox;
+    }
+
     // create new tmp image that is the bounding box of the connected component
     // + padding to draw the shape in the center
     cv::Mat character_padded = cv::Mat::zeros(
@@ -36,13 +53,14 @@ void Renderform::Partitioner::process() {
     cv::bitwise_not(character_padded, character_padded);
 
     // Strenghten the borders
-    cv::Mat structuring_element = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 1));
-    cv::dilate(character_padded, character_padded, structuring_element, cv::Point(-1, -1),
-      2);
+    cv::Mat structuring_element =
+        cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 1));
+    cv::dilate(character_padded, character_padded, structuring_element,
+               cv::Point(-1, -1), 2);
 
     // De-pixelate the character
-    cv::GaussianBlur(character_padded, character_padded, cv::Size(3, 3), 0,
-                     0);
+    // cv::GaussianBlur(character_padded, character_padded, cv::Size(3, 3), 0,
+    // 0);
 
     // // Threshold and binarize the original image
     // // (Currently assumes no overlap - this might need to be adjusted and
@@ -56,231 +74,6 @@ void Renderform::Partitioner::process() {
     Renderform::Character character_object{character_padded, bbox, center};
 
     this->addCharacter(character_object);
-
-    continue;
-
-    // cv::erode(character_thresholded, character_thresholded, cv::Mat(),
-    //           cv::Point(-1, -1), 1);
-
-    // // get contours of the connected component
-    // std::vector<std::vector<cv::Point>> character_contours;
-    // cv::findContours(character_thresholded, character_contours,
-    // cv::RETR_TREE,
-    //                  cv::CHAIN_APPROX_SIMPLE);
-
-    // if (character_contours.size() == 0) {
-    //   std::cout << "No contours found for component " << i << std::endl;
-    //   continue;
-    // }
-
-    // std::cout << "Number of contours: " << character_contours.size()
-    //           << std::endl;
-
-    // cv::Mat character_demo;
-    // // get contour of the shape not the bounding box
-    // // make thresholded image rgb to draw contours
-    // cv::cvtColor(character_thresholded, character_demo, cv::COLOR_GRAY2BGR);
-
-    // // cv::drawContours(character_demo, character_contours, 1,
-    // //                  cv::Scalar(0, 255, 0), -1);
-
-    // // cv::drawContours(character_demo, character_contours, 2,
-    // //                  cv::Scalar(0, 0, 255), 1);
-
-    // cv::drawContours(character_thresholded, character_contours, 1,
-    //                  cv::Scalar(0), -1);
-
-    // for (int j = 2; j < character_contours.size(); j++) {
-    //   cv::drawContours(character_thresholded, character_contours, j,
-    //                    cv::Scalar(0), 1);
-    // }
-
-    // De-pixelate the character
-    // cv::GaussianBlur(character_thresholded, character_thresholded,
-    //                  cv::Size(13, 13), 0, 0);
-    // cv::erode(character_thresholded, character_thresholded, cv::Mat(),
-    //           cv::Point(-1, -1), 1);
-
-    // fill in outline to get a solid shape
-    // Invert thresholded image
-    // cv::bitwise_not(character_thresholded, character_thresholded);
-
-    // // Apply dilation and erosion to the thresholded image
-    // int dilation_size = 1;
-    // int dilation_type = cv::MORPH_ERODE;
-    // cv::Mat element = getStructuringElement(
-    //     dilation_type, cv::Size(2 * dilation_size + 1, 2 * dilation_size +
-    //     1), cv::Point(dilation_size, dilation_size));
-
-    // // cv::erode(character_thresholded, character_thresholded, element,
-    // //           cv::Point(-1, -1), 1);
-    // // cv::dilate(character_thresholded, character_thresholded, element,
-    // //            cv::Point(-1, -1), 1);
-
-    // // cv::imshow("Character Bounding Box " + std::to_string(i),
-    // //            character_thresholded);
-    // // cv::waitKey(0);
-
-    // // Assuming the connected component is a single character, we can use the
-    // // properties of the character and do some non-OCR based determination
-    // below
-    // // is AI generated and most definitely not accurate but is a good
-    // starting
-    // // point for example, if the height is greater than the width, it is
-    // likely
-    // // a 1, 4, 7, or 9 if the height is less than the width, it is likely a
-    // 0,
-    // // 2, 3, 5, 6, or 8 if the height is equal to the width, it is likely a
-    // 1,
-    // // 4, 7, or 9 if the height is less than 1.5 times the width, it is
-    // likely a
-    // // 1, 4, 7, or 9 if the height is greater than 1.5 times the width, it is
-    // // likely a 0, 2, 3, 5, 6, or 8 if the height is greater than 2 times the
-    // // width, it is likely a 0, 2, 3, 5, 6, or 8 if the height is greater
-    // than 3
-    // // times the width, it is likely a 0, 2, 3, 5, 6, or 8
-    // //
-    // // Back to human:
-    // // if it is a long stick with a small hat, it is likely a 1
-    // //
-
-    // // Calculate properties of the thresholded image
-    // // a. Aspect ratio
-    // // b. Area
-    // // c. Height
-    // // d. Width
-    // // e. Number of holes
-    // // f. Number of edges
-    // // g. Number of corners
-    // // h. Number of intersections
-    // // i. Number of loops
-    // // j. Number of endpoints
-    // // k. Circularity
-    // // l. straightness
-    // // m. thickness
-    // // n. slant
-    // //
-    // std::cout << "├┄┄ Object Properties" << std::endl;
-
-    // double width = bbox.width;
-    // double height = bbox.height;
-    // double aspectRatio = width / height;
-    // double area = cv::countNonZero(character_thresholded);
-
-    // std::vector<std::vector<cv::Point>> contours;
-    // cv::findContours(character_thresholded, contours, cv::RETR_CCOMP,
-    //                  cv::CHAIN_APPROX_SIMPLE);
-
-    // std::cout << "│\tHeight: " << height << std::endl;
-    // std::cout << "│\tWidth: " << width << std::endl;
-
-    // std::cout << "│\tNumber of raw contours: " << contours.size() <<
-    // std::endl;
-
-    // // draw contours to visualize
-    // // make copy of input image, bound it with the bounding box and draw
-    // // contours
-    // cv::Mat demo_character_contours = character.clone();
-    // // change character to color for visualization
-    // cv::cvtColor(demo_character_contours, demo_character_contours,
-    //              cv::COLOR_GRAY2BGR);
-    // // add padding for demo purposes
-    // cv::rectangle(demo_character_contours, bbox, cv::Scalar(0, 255, 0), 2);
-    // cv::drawContours(demo_character_contours, contours, -1,
-    //                  cv::Scalar(0, 0, 255), 2);
-
-    // std::vector<std::vector<cv::Point>> filtered_contours;
-    // int contour_i = 0;
-    // for (const auto &contour : contours) {
-    //   contour_i++;
-
-    //   std::cout << "│\t╰┄┄ Contour " << contour_i << " (size " <<
-    //   contour.size()
-    //             << ")" << std::endl;
-
-    //   // Compute contour area
-    //   double area = cv::contourArea(contour);
-
-    //   // if 4 points and the x is 0 or width and y is 0 or height, it is the
-    //   // border and should be ignored
-    //   if (contour.size() == 4) {
-    //     bool isBorder = false;
-    //     std::cout << "│\t\tContour is a rectangle (FIRST CHECK)" <<
-    //     std::endl; for (const auto &point : contour) {
-    //       // check if point is on the border
-    //       if ((point.x == 0 || point.x == width - 1) &&
-    //           (point.y == 0 || point.y == height - 1)) {
-    //         isBorder = true;
-    //       } else {
-    //         isBorder = false;
-    //         break;
-    //       }
-    //     }
-    //     if (isBorder) {
-    //       std::cout << "│\t\t☒ Contour is a border" << std::endl;
-    //       continue;
-    //     }
-    //   }
-
-    //   // Check if contour area is greater than a threshold (adjust this
-    //   // threshold as needed)
-    //   if (area > 30) { // Example threshold value
-    //     // Approximate the contour to a polygon
-    //     std::vector<cv::Point> approx;
-    //     cv::approxPolyDP(contour, approx, 0.03 * cv::arcLength(contour,
-    //     true),
-    //                      true);
-
-    //     // draw this to imageCopy2
-    //     // cv::drawContours(imageCopy2, contour, -1, cv::Scalar(0, 0, 255),
-    //     1);
-
-    //     filtered_contours.push_back(contour);
-    //     std::cout << "│\t\t☑ Useful (area " << area << ")" << std::endl;
-
-    //     // Check if the contour is not entirely rectangular
-    //     // if (approx.size() != 4) {
-    //     //   filtered_contours.push_back(contour);
-    //     //   std::cout << "│\t\t☑ Useful" << std::endl;
-    //     // } else {
-    //     //   std::cout << "│\t\t☒ Contour is a rectangle" << std::endl;
-    //     //   std::cout << "│\t\tPoints: " << std::endl;
-    //     //   for (const auto &point : approx) {
-    //     //     std::cout << "│\t\t\t" << point << std::endl;
-    //     //   }
-    //     // }
-    //   } else {
-    //     std::cout << "│\t\t☒ Area is small (" << area << ")" << std::endl;
-    //   }
-    // }
-
-    // // print contours to stdout
-    // int num_contours = 0;
-    // for (const auto &contour : filtered_contours) {
-    //   // std::cout << "Contour: " << std::endl;
-    //   // for (const auto &point : contour) {
-    //   //   std::cout << point << std::endl;
-    //   // }
-    //   num_contours++;
-    // }
-
-    // cv::drawContours(demo_character_contours, filtered_contours, -1,
-    //                  cv::Scalar(0, 0, 255), 1);
-
-    // std::cout << "│\tNumber of filtered contours: " << num_contours
-    //           << std::endl;
-    // std::cout << "│\tAspect Ratio: " << aspectRatio << std::endl;
-    // std::cout << "│\tArea: " << area << std::endl;
-    // std::cout << "│\tArea / Perimeter: "
-    //           << area / cv::arcLength(contours[1], true) << std::endl;
-
-    // cv::imshow("Component " + std::to_string(i), thresholded);
-    // cv::imshow("Component contours" + std::to_string(i),
-    // demo_character_contours);
-    // cv::waitKey(0);
-
-    // Draw bounding box around each component (for visualization)
-    // cv::rectangle(image, bbox, cv::Scalar(0, 0, 255), 1, cv::LINE_4);
   }
 }
 
@@ -289,8 +82,100 @@ cv::Mat Renderform::Partitioner::processComponent(cv::Mat component) {
 }
 
 Renderform::Characters Renderform::Partitioner::getCharacters() {
+
+  // Sort characters by y coordinates (first step to group characters by lines)
+  std::sort(this->characters.begin(), this->characters.end(),
+            [](const Renderform::Character &a, const Renderform::Character &b) {
+              return a.getCenter().y < b.getCenter().y;
+            });
+
+  // Find threshold to group characters by lines -- half of largest character
+  // height
+  double threshold = this->getLargestCharacterBoundingBox().height * 0.5;
+
+  // start group and end group once y coordinates changes by a certain threshold
+  Renderform::LineCharacters group;
+  int prev_y = this->characters[0].getCenter().y;
+  int line_number = 0;
+  for (auto &character : this->characters) {
+    if (threshold < std::abs(character.getCenter().y - prev_y)) {
+      /* Reset group and add previous line to groups */
+      this->lines.push_back(group);
+      group.clear();
+    }
+    // Add character to group sorted by x coordinates
+    group.insert({character.getCenter().x, character});
+
+    // group.push_back(character);
+    prev_y = character.getCenter().y;
+
+    line_number++;
+  }
+  this->lines.push_back(group);
+
+  std::cout << "Number of lines: " << this->lines.size() << std::endl;
+
+  // Get each line
+  // for (auto &line : this->lines) {
+  //   std::cout << "Line " << line.first << " has " << line.second.size()
+  //             << " characters" << std::endl;
+  // }
+
+  // sort by x coordinates
+  // int group_index = 0;
+  // for (auto &group : groups) {
+  //   group_index++;
+  //   std::sort(
+  //       group.begin(), group.end(),
+  //       [](const Renderform::Character &a, const Renderform::Character &b) {
+  //         return a.getCenter().x < b.getCenter().x;
+  //       });
+  //   std::cout << "Group " << group_index << " has " << group.size()
+  //             << " characters" << std::endl;
+  //   int min_x = 99999;
+  //   int max_x = 0;
+  //   int min_y = 99999;
+  //   int max_y = 0;
+  //   for (auto &character : group) {
+  //     std::cout << character.getCenter().x << " " << character.getCenter().y
+  //               << std::endl;
+  //     if (character.getCenter().x < min_x) {
+  //       min_x = character.getTopLeft().x;
+  //     }
+  //     if (character.getCenter().x > max_x) {
+  //       max_x = character.getTopRight().x;
+  //     }
+  //     if (character.getCenter().y < min_y) {
+  //       min_y = character.getBottomRight().y;
+  //     }
+  //     if (character.getCenter().y > max_y) {
+  //       max_y = character.getTopRight().y;
+  //     }
+  //   }
+  //   std::cout << "Group " << group_index << " has min_x: " << min_x
+  //             << " max_x: " << max_x << " min_y: " << min_y
+  //             << " max_y: " << max_y << std::endl;
+  //   // add rectangle to source_binary_image
+  //   cv::rectangle(*(this->source_binary_image), cv::Point(min_x, min_y),
+  //                 cv::Point(max_x, max_y), cv::Scalar(255, 255, 255), 2);
+  //   cv::imshow("Group " + std::to_string(group_index),
+  //              *(this->source_binary_image));
+  //   cv::waitKey(0);
+  // }
+
+  /*
+  sort by y and x coordinates
+  */
+  // std::sort(this->characters.begin(), this->characters.end(),
+  //           [](const Renderform::Character &a, const Renderform::Character
+  //           &b) {
+  //             return a.getCenter().x < b.getCenter().x;
+  //           });
+
   return this->characters;
 }
+
+Renderform::Lines Renderform::Partitioner::getLines() { return this->lines; }
 
 void Renderform::Partitioner::addCharacter(Renderform::Character character) {
   this->characters.push_back(character);

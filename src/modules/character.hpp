@@ -13,6 +13,13 @@ public:
   cv::Rect getBoundingBox() const;
   cv::Point getCenter() const;
 
+  cv::Point getTopLeft() const;
+  cv::Point getTopRight() const;
+  cv::Point getBottomLeft() const;
+  cv::Point getBottomRight() const;
+
+  void calculateProperties();
+
 private:
   cv::Mat component;
   cv::Rect bounding_box;

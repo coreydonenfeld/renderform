@@ -8,7 +8,8 @@
 
 namespace Renderform {
 
-Formula parse(const std::string &image_path);
+Formula parseImage(const std::string &image_path);
+Formula parseText(const std::string &text);
 
 }; // namespace Renderform
 

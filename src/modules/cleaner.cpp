@@ -20,10 +20,11 @@ image
 
 #include "cleaner.hpp"
 #include <opencv2/imgproc.hpp>
+#include <opencv2/photo.hpp>
 
 Renderform::Cleaner::Cleaner(cv::Mat *image) : source_image(image) {
-  cv::imshow("Original Image cleaning", *image);
-  cv::waitKey(0);
+  // cv::imshow("Original Image cleaning", *image);
+  // cv::waitKey(0);
   this->processed_image = cv::Mat{};
 }
 
@@ -34,8 +35,45 @@ void Renderform::Cleaner::process() {
   cv::cvtColor(*(this->source_image), this->processed_image,
                cv::COLOR_BGR2GRAY);
 
-  cv::imshow("Grayscale Image", this->processed_image);
-  cv::waitKey(0);
+  // cv::imshow("Grayscale Image", this->processed_image);
+  // cv::waitKey(0);
+
+  // Need to get ONLY characters on page and remove everything else
+
+  // Canny edge detection
+  // cv::Mat edges;
+  // // cv::Canny(this->processed_image, edges, 107, 80);
+
+  // cv::Mat sobelx, sobely, sobelxy;
+  // cv::Sobel(this->processed_image, sobelx, CV_64F, 1, 0, 3);
+  // cv::Sobel(this->processed_image, sobely, CV_64F, 0, 1, 3);
+  // cv::Sobel(this->processed_image, sobelxy, CV_64F, 1, 1, 3);
+
+  // // cv::imshow("Sobelx", sobelx);
+  // // cv::waitKey(0);
+  // // cv::imshow("Sobely", sobely);
+  // // cv::waitKey(0);
+  // // cv::imshow("Sobel", sobelxy);
+  // // cv::waitKey(0);
+
+  // cv::magnitude(sobelx, sobely, sobelxy);
+  // cv::convertScaleAbs(sobelxy, edges);
+
+  // // enhance edges
+  // // cv::dilate(edges, edges, cv::Mat{}, cv::Point(-1, -1), 2);
+  // // cv::GaussianBlur(edges, edges, cv::Size(9, 9), 12, 4);
+  // // cv::threshold(edges, edges, 0, 255, cv::THRESH_BINARY |
+  // cv::THRESH_OTSU);
+
+  // cv::imshow("Edges", edges);
+  // cv::waitKey(0);
+
+  // cv::Mat foreground;
+
+  // // cv::multiply(this->processed_image, edges, foreground);
+  // cv::threshold(edges, foreground, 40, 255, cv::THRESH_BINARY);
+  // cv::imshow("Foreground", foreground);
+  // cv::waitKey(0);
 
   // Subtract blurred from grayscale
   // cv::Mat blurred;
