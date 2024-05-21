@@ -11,6 +11,7 @@ set(HEADER_FILES
 	modules/evaluator.hpp
 	modules/renderer.hpp
 	modules/character.hpp
+	classifiers/knn.hpp
 )
 set(SOURCE_FILES
 	renderform.cpp
@@ -24,6 +25,7 @@ set(SOURCE_FILES
 	modules/evaluator.cpp
 	modules/renderer.cpp
 	modules/character.cpp
+	classifiers/knn.cpp
 )
 
 add_executable(renderform ${HEADER_FILES} ${SOURCE_FILES})

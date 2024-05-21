@@ -1,6 +1,7 @@
 #ifndef RENDERFORM_RECOGNIZER_H
 #define RENDERFORM_RECOGNIZER_H
 
+#include "../classifiers/knn.hpp"
 #include "character.hpp"
 #include <opencv2/opencv.hpp>
 #include <string>

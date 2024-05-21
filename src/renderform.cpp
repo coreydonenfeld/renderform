@@ -53,8 +53,8 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
 
       // For visualization
       std::string character_text = ocr.recognize(character);
-      std::cout << "Character " << line_number << ":" << character_number
-                << " guess: " << character_text << std::endl;
+      // std::cout << "Character " << line_number << ":" << character_number
+      //           << " guess: " << character_text << std::endl;
       cv::putText(
           image_display,
           std::to_string(line_number) + ":" + std::to_string(character_number) +
