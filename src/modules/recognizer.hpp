@@ -25,7 +25,7 @@ public:
 
   tesseract::TessBaseAPI &TesseractAPI();
 
-  std::string recognize(const Character &character);
+  std::string recognize(Character &character);
 
   // std::string recognize(const Line &line);
 

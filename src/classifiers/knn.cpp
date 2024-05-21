@@ -129,10 +129,28 @@ int Renderform::classifyKnn(const cv::Mat &img) {
   float *featuresPtr = features.ptr<float>(0);
   memcpy(featuresPtr, descriptor.data(), descriptor.size() * sizeof(float));
 
-  cv::Mat response;
-  knn->findNearest(features, 1, response);
+  cv::Mat response, neighborIndices, distances;
+  auto nearest_response =
+      knn->findNearest(features, 1, response, neighborIndices, distances);
 
-  return response.at<float>(0, 0);
+  if (distances.empty() || response.empty()) {
+    std::cerr << "Error during KNN prediction!" << std::endl;
+    return -1; // Error during prediction
+  }
+
+  float distance = distances.at<float>(0, 0);
+  float predictedLabel = response.at<float>(0, 0);
+  // std::cout << "nearest response: " << nearest_response
+  //           << ", distance: " << distance << std::endl;
+
+  // Optionally, use the distance to make decisions
+  // For example, if the distance is too high, classify as non-digit (10)
+  // const double INCORRECT_DISTANCE_THRESHOLD = 10.0;
+  // if (distance > INCORRECT_DISTANCE_THRESHOLD) {
+  //   return -1; // Non-digit
+  // }
+
+  return static_cast<int>(predictedLabel);
 }
 
 //----------------------------------------------------------------------------

@@ -4,6 +4,9 @@
 Renderform::Recognizer::Recognizer(std::string language)
     : tesseract_api(), language(language) {
   TesseractAPI().Init(NULL, this->language.c_str(), tesseract::OEM_LSTM_ONLY);
+  TesseractAPI().SetPageSegMode(tesseract::PSM_SINGLE_CHAR);
+  TesseractAPI().SetVariable("tessedit_char_whitelist",
+                             "0123456789xyzXYZ()*/+-=<>JjoO");
 
   cv::Mat image = cv::imread("../data/0-9-digits.png", cv::IMREAD_COLOR);
 
@@ -29,7 +32,7 @@ tesseract::TessBaseAPI &Renderform::Recognizer::TesseractAPI() {
 //
 // possibly look to train: https://github.com/wblachowski/bhmsds
 
-std::string Renderform::Recognizer::recognize(const Character &character) {
+std::string Renderform::Recognizer::recognize(Character &character) {
   cv::Mat classify_image = character.getComponent();
   // cv::resize(classify_image, classify_image, cv::Size(20, 20));
   // cv::imshow("test_img", classify_image);
@@ -43,10 +46,27 @@ std::string Renderform::Recognizer::recognize(const Character &character) {
       character.getComponent().size().height,
       character.getComponent().channels(), character.getComponent().step);
 
-  std::string result = std::string(TesseractAPI().GetUTF8Text());
+  std::string resultTesseract = std::string(TesseractAPI().GetUTF8Text());
+  std::string resultKnn = std::to_string(classifyKnn(classify_image));
 
   // Remove newlines
-  result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
+  resultTesseract.erase(
+      std::remove(resultTesseract.begin(), resultTesseract.end(), '\n'),
+      resultTesseract.end());
+  resultKnn.erase(std::remove(resultKnn.begin(), resultKnn.end(), '\r'),
+                  resultKnn.end());
 
-  return result;
+  // If tesseract has more than one character, take the first one
+  if (resultTesseract.size() > 1) {
+    resultTesseract = resultTesseract.substr(0, 1);
+  }
+
+  // @todo Really small 0 or o or O should be treated as * (multiplication)
+
+  character.setLabelPredictedKnn(resultKnn);
+  character.setLabelPredictedTesseract(resultTesseract);
+  character.setKnnConfidence(1.0);
+  character.setTesseractConfidence(TesseractAPI().MeanTextConf());
+
+  return resultKnn;
 }

@@ -33,14 +33,17 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
 
   Renderform::Recognizer ocr;
 
+  std::vector<std::string> lines_text;
+
   cv::Mat image_display = image_src.clone();
 
   int line_number = 0;
-  for (const auto &line : partitioner.getLines()) {
+  for (auto &line : partitioner.getLines()) {
+    std::string line_text;
     int character_number = 0;
     cv::Point top_left{INT_MAX, INT_MAX};
     cv::Point bottom_right{0, 0};
-    for (const auto &[x, character] : line) {
+    for (auto &[x, character] : line) {
       // Get top left and bottom right points of the bounding box
       top_left.x = std::min(top_left.x, character.getBoundingBox().x);
       top_left.y = std::min(top_left.y, character.getBoundingBox().y);
@@ -53,12 +56,32 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
 
       // For visualization
       std::string character_text = ocr.recognize(character);
-      // std::cout << "Character " << line_number << ":" << character_number
-      //           << " guess: " << character_text << std::endl;
+      std::cout << "Character " << line_number << ":" << character_number
+                << " guess from Knn: " << character_text << std::endl
+                << " guess from Tesseract (confidence: "
+                << character.getTesseractConfidence()
+                << "%): " << character.getLabelPredictedTesseract()
+                << std::endl;
+
+      if (!character.getLabelDetermined().empty()) {
+        line_text += character.getLabelDetermined();
+      } else if (!character.getLabelPredictedTesseract().empty()) {
+        line_text += character.getLabelPredictedTesseract();
+      } else {
+        line_text += character_text;
+      }
+
+      cv::rectangle(
+          image_display,
+          cv::Point(character.getBoundingBox().x, character.getBoundingBox().y),
+          cv::Point(
+              character.getBoundingBox().x + character.getBoundingBox().width,
+              character.getBoundingBox().y + character.getBoundingBox().height),
+          cv::Scalar(0, 255, 0), 2);
       cv::putText(
           image_display,
-          std::to_string(line_number) + ":" + std::to_string(character_number) +
-              " " + character_text,
+          character.getLabelPredictedTesseract() + " " +
+              character.getLabelPredictedKnn(),
           cv::Point(character.getBoundingBox().x, character.getBoundingBox().y),
           cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
       character_number++;
@@ -73,7 +96,12 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
     std::cout << "Line " << line_number << " has " << character_number
               << " characters" << std::endl;
 
+    lines_text.push_back(line_text);
     line_number++;
+  }
+
+  for (int i = 0; i < lines_text.size(); i++) {
+    std::cout << "Line " << i << ": " << lines_text[i] << std::endl;
   }
 
   cv::imshow("Image display with rects", image_display);

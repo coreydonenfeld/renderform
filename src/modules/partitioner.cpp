@@ -1,6 +1,7 @@
 #include "partitioner.hpp"
 #include "character.hpp"
 #include <cmath>
+#include <opencv2/core/types.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -13,56 +14,12 @@ double Renderform::Partitioner::getArea(cv::Rect bbox) {
   return bbox.width * bbox.height;
 }
 
-// double Renderform::Partitioner::getArea(cv::Mat image) {
-//   return cv::countNonZero(image);
-// }
-
 cv::Rect Renderform::Partitioner::getLargestCharacterBoundingBox() {
   return this->largest_character_bbox;
 }
 
-cv::Mat resizeWithAspectRatio(const cv::Mat &src, int maxWidth, int maxHeight) {
-  if (src.empty()) {
-    std::cerr << "Input image is empty." << std::endl;
-    return cv::Mat();
-  }
-
-  int width = src.cols;
-  int height = src.rows;
-
-  // Calculate the aspect ratio
-  double aspectRatio = static_cast<double>(width) / height;
-
-  int newWidth, newHeight;
-
-  // Determine the new dimensions while preserving the aspect ratio
-  if (width > maxWidth || height > maxHeight) {
-    if (width > maxWidth) {
-      newWidth = maxWidth;
-      newHeight = static_cast<int>(maxWidth / aspectRatio);
-    } else {
-      newWidth = width;
-      newHeight = height;
-    }
-
-    if (newHeight > maxHeight) {
-      newHeight = maxHeight;
-      newWidth = static_cast<int>(maxHeight * aspectRatio);
-    }
-  } else {
-    newWidth = width;
-    newHeight = height;
-  }
-
-  // Resize the image
-  cv::Mat dst;
-  cv::resize(src, dst, cv::Size(newWidth, newHeight), 0, 0, cv::INTER_AREA);
-
-  return dst;
-}
-
 cv::Mat resizeAndPad(const cv::Mat &src, int targetWidth, int targetHeight,
-                     int paddingWidth, int paddingHeight) {
+                     int paddingWidth, int paddingHeight, cv::Rect &roi) {
   if (src.empty()) {
     std::cerr << "Input image is empty." << std::endl;
     return cv::Mat();
@@ -117,6 +74,9 @@ cv::Mat resizeAndPad(const cv::Mat &src, int targetWidth, int targetHeight,
   int xOffset = paddingWidth + (adjustedWidth - newWidth) / 2;
   int yOffset = paddingHeight + (adjustedHeight - newHeight) / 2;
 
+  cv::Rect new_roi(xOffset, yOffset, newWidth, newHeight);
+  roi = new_roi;
+
   // Place the resized image in the center of the new image
   resizedImage.copyTo(
       paddedImage(cv::Rect(xOffset, yOffset, newWidth, newHeight)));
@@ -125,56 +85,58 @@ cv::Mat resizeAndPad(const cv::Mat &src, int targetWidth, int targetHeight,
 }
 
 void Renderform::Partitioner::process() {
-  const int PADDING = 12;
-  const int CHARACTER_HEIGHT = 36;
-  const int CHARACTER_WIDTH = 36;
-
-  // Apply connected component labeling
+  /* Step 1: Connected component labeling on binary image. */
   cv::Mat labels, stats, centroids;
   int num_labels = cv::connectedComponentsWithStats(
       *(this->source_binary_image), labels, stats, centroids);
-
   this->num_characters = num_labels;
 
+  /* Step 2: Create character objects for each connected component (that is
+     sufficiently large). */
   for (int i = 1; i < this->num_characters; i++) {
-    cv::Rect bounding_box(stats.at<int>(i, cv::CC_STAT_LEFT),
-                          stats.at<int>(i, cv::CC_STAT_TOP),
-                          stats.at<int>(i, cv::CC_STAT_WIDTH),
-                          stats.at<int>(i, cv::CC_STAT_HEIGHT));
+    /* Get the bounding box in relation to the original image. */
+    cv::Rect bounding_box_image(stats.at<int>(i, cv::CC_STAT_LEFT),
+                                stats.at<int>(i, cv::CC_STAT_TOP),
+                                stats.at<int>(i, cv::CC_STAT_WIDTH),
+                                stats.at<int>(i, cv::CC_STAT_HEIGHT));
 
-    if (getArea(bounding_box) > getArea(this->largest_character_bbox)) {
-      this->largest_character_bbox = bounding_box;
+    if (getArea(bounding_box_image) > getArea(this->largest_character_bbox)) {
+      this->largest_character_bbox = bounding_box_image;
     }
 
-    // create new tmp image that is the bounding box of the connected component
-    // + padding to draw the shape in the center
-    cv::Mat character =
-        cv::Mat::zeros(bounding_box.height, bounding_box.width, CV_8UC1);
-    cv::Mat component = (labels(bounding_box) == i);
+    /* Create an image containing only the character connected component. */
+    cv::Mat character = cv::Mat::zeros(bounding_box_image.height,
+                                       bounding_box_image.width, CV_8UC1);
+    cv::Mat component = (labels(bounding_box_image) == i);
+    component.copyTo(character(
+        cv::Rect(0, 0, bounding_box_image.width, bounding_box_image.height)));
 
-    // add the connected component to the tmp image
-    component.copyTo(
-        character(cv::Rect(0, 0, bounding_box.width, bounding_box.height)));
-    // Invert the connected component
+    /* Invert the image so that the character is black and the background is
+       white (Tesseract does better with black text). */
     cv::bitwise_not(character, character);
 
-    // std::cout << "Area: " << cv::countNonZero(character) << std::endl;
-
+    /* Avoid small components: they are likely noise. */
     if (cv::countNonZero(character) < 5) {
       std::cout << "Warning: Character too small" << std::endl;
       continue;
     }
 
-    int width = CHARACTER_WIDTH + PADDING * 2;
-    int height = CHARACTER_HEIGHT + PADDING * 2;
+    // if (bounding_box_image.height > 10 * height ||
+    //     bounding_box_image.width > 10 * width) {
+    //   std::cout << "Warning: Character too large" << std::endl;
+    //   continue;
+    // }
 
-    if (bounding_box.height > 10 * height || bounding_box.width > 10 * width) {
-      std::cout << "Warning: Character too large" << std::endl;
-      continue;
-    }
+    /* Get the bounding box of the character in relation to the small character
+       only padded image. */
+    cv::Rect bounding_box_normalized;
+    cv::Mat character_normalized = resizeAndPad(
+        character, Renderform::Character::getWidth(),
+        Renderform::Character::getHeight(), Renderform::Character::PADDING,
+        Renderform::Character::PADDING, bounding_box_normalized);
 
-    cv::Mat character_normalized =
-        resizeAndPad(character, width, height, PADDING, PADDING);
+    std::cout << "normalized bunding box: " << bounding_box_normalized
+              << std::endl;
 
     // Strenghten the borders
     cv::Mat structuring_element =
@@ -183,9 +145,9 @@ void Renderform::Partitioner::process() {
               cv::Point(-1, -1), 1);
 
     cv::Point center(centroids.at<double>(i, 0), centroids.at<double>(i, 1));
-    Renderform::Character character_object{character_normalized, bounding_box,
-                                           center};
-
+    Renderform::Character character_object{character_normalized,
+                                           bounding_box_image, center};
+    character_object.setNormalizedBoundingBox(bounding_box_normalized);
     this->addCharacter(character_object);
   }
 }
@@ -270,53 +232,26 @@ Renderform::Characters Renderform::Partitioner::getCharacters() {
       group.clear();
     }
 
-    // Get contours of character and print them in red
-    cv::Mat character_contours = character.getComponent().clone();
-    cv::Mat structuring_element =
-        cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 1));
-    cv::erode(character_contours, character_contours, structuring_element,
-              cv::Point(-1, -1), 1);
-    cv::threshold(character_contours, character_contours, 30, 255,
-                  cv::THRESH_BINARY | cv::THRESH_OTSU);
-    std::vector<std::vector<cv::Point>> contours;
-    cv::findContours(character_contours, contours, cv::RETR_TREE,
-                     cv::CHAIN_APPROX_NONE);
+    // // Get contours of character and print them in red
+    // cv::Mat character_contours = character.getComponent().clone();
+    // cv::Mat structuring_element =
+    //     cv::getStructuringElement(cv::MORPH_RECT, cv::Size(1, 1));
+    // cv::erode(character_contours, character_contours, structuring_element,
+    //           cv::Point(-1, -1), 1);
+    // cv::threshold(character_contours, character_contours, 30, 255,
+    //               cv::THRESH_BINARY | cv::THRESH_OTSU);
+    // std::vector<std::vector<cv::Point>> contours;
+    // cv::findContours(character_contours, contours, cv::RETR_TREE,
+    //                  cv::CHAIN_APPROX_NONE);
 
-    cv::Mat character_contours_color;
-    cv::cvtColor(character_contours, character_contours_color,
-                 cv::COLOR_GRAY2BGR);
+    // cv::Mat character_contours_color;
+    // cv::cvtColor(character_contours, character_contours_color,
+    //              cv::COLOR_GRAY2BGR);
 
-    for (int i = 1; i < contours.size(); i++) {
-      cv::drawContours(character_contours_color, contours, i,
-                       cv::Scalar(0, 0, 255), 1, cv::LINE_8);
-    }
-
-    // Use hough lines to see if character is a strong horizontal line
-    cv::Mat character_hough_lines = character.getComponent().clone();
-    cv::Canny(character_hough_lines, character_hough_lines, 50, 200, 3);
-    cv::imshow("Hough Lines", character_hough_lines);
-    cv::waitKey(0);
-    std::vector<cv::Vec4i> hough_lines_contours;
-    cv::HoughLinesP(character_hough_lines, hough_lines_contours, 1, CV_PI / 180,
-                    50, 50, 10);
-    for (size_t i = 0; i < hough_lines_contours.size(); i++) {
-      cv::Vec4i l = hough_lines_contours[i];
-      cv::line(character_contours_color, cv::Point(l[0], l[1]),
-               cv::Point(l[2], l[3]), cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
-    }
-
-    if (contours.size() == 2) {
-
-      // Get rectangularness of character
-      cv::RotatedRect rotated_rect = cv::minAreaRect(contours[1]);
-      float rectangularness =
-          rotated_rect.size.width / rotated_rect.size.height;
-      std::cout << "Rectangularness: "
-                << calculateRectangleLikelihood(contours[1], 0.03) << std::endl;
-
-      cv::imshow("Character Contours", character_contours_color);
-      cv::waitKey(0);
-    }
+    // for (int i = 1; i < contours.size(); i++) {
+    //   cv::drawContours(character_contours_color, contours, i,
+    //                    cv::Scalar(0, 0, 255), 1, cv::LINE_8);
+    // }
 
     // Add character to group sorted by x coordinates
     group.insert({character.getCenter().x, character});
@@ -327,6 +262,122 @@ Renderform::Characters Renderform::Partitioner::getCharacters() {
     line_number++;
   }
   this->lines.push_back(group);
+
+  for (auto &line : this->lines) {
+    Renderform::Character previous_character;
+    auto previous_character_it = line.begin();
+    int previous_character_type = -1;
+    for (auto it = line.begin(); it != line.end(); ++it) {
+      auto &[x, character] = *it;
+      std::cout << character.getBoundingBox().area() << std::endl;
+
+      // get width
+      int width = character.getBoundingBox().width;
+      int height = character.getBoundingBox().height;
+      double aspect_ratio = static_cast<double>(width) / height;
+      std::cout << "Aspect ratio: " << aspect_ratio << std::endl;
+      // cv::imshow("Character", character.getComponent());
+      // cv::waitKey(0);
+
+      if (previous_character_type == 1 && aspect_ratio > 1.25) {
+        // std::cout << "previous character y center: "
+        //           << previous_character.getCenter().y << std::endl;
+        // std::cout << "previous character x center: "
+        //           << previous_character.getCenter().x << std::endl;
+        // std::cout << "current character y center: " <<
+        // character.getCenter().y
+        //           << std::endl;
+        // std::cout << "current character x center: " <<
+        // character.getCenter().x
+        //           << std::endl;
+        // Calculate distance between characters
+        double distance =
+            cv::norm(previous_character.getCenter() - character.getCenter());
+        // std::cout << getLargestCharacterBoundingBox() << std::endl;
+        // std::cout << "Distance between characters: " << distance <<
+        // std::endl;
+
+        if (distance > getLargestCharacterBoundingBox().height) {
+          continue;
+        }
+        // std::cout
+        //     << "Previous character is a wide rectangle and this one is too"
+        //     << std::endl;
+
+        // std::cout << "Previous character: "
+        //           << previous_character.getBoundingBox() << std::endl;
+        // std::cout << "Current character: " << character.getBoundingBox()
+        //           << std::endl;
+
+        // join the bounding boxes
+        // get the two characters
+
+        cv::Rect combined_bounding_box =
+            previous_character.getBoundingBox() | character.getBoundingBox();
+        std::cout << "Combined bounding box: " << combined_bounding_box
+                  << std::endl;
+        cv::Mat combined_components =
+            (*(this->source_binary_image))(combined_bounding_box);
+
+        cv::bitwise_not(combined_components, combined_components);
+
+        /* Avoid small components: they are likely noise. */
+        if (cv::countNonZero(combined_components) < 5) {
+          std::cout << "Warning: Character too small" << std::endl;
+          continue;
+        }
+
+        /* Get the bounding box of the character in relation to the small
+           character only padded image. */
+        cv::Rect bounding_box_normalized;
+        cv::Mat character_normalized = resizeAndPad(
+            combined_components, Renderform::Character::getWidth(),
+            Renderform::Character::getHeight(), Renderform::Character::PADDING,
+            Renderform::Character::PADDING, bounding_box_normalized);
+
+        std::cout << "normalized bunding box: " << bounding_box_normalized
+                  << std::endl;
+
+        // Strenghten the borders
+        cv::Mat structuring_element =
+            cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+        cv::erode(character_normalized, character_normalized,
+                  structuring_element, cv::Point(-1, -1), 1);
+
+        cv::Point center = cv::Point(
+            combined_bounding_box.x + combined_bounding_box.width / 2,
+            combined_bounding_box.y + combined_bounding_box.height / 2);
+
+        Renderform::Character combined_character(character_normalized,
+                                                 combined_bounding_box, center);
+        combined_character.setNormalizedBoundingBox(bounding_box_normalized);
+        combined_character.setLabelDetermined("=");
+
+        // cv::imshow("Combined character", combined_character.getComponent());
+        // cv::waitKey(0);
+
+        line.erase(previous_character_it);
+        line.erase(it++);
+        line.insert({center.x, combined_character});
+
+        // add combined character in current position
+
+        previous_character_type = 0;
+      } else {
+
+        // aspect ratio > 2 = wide rectangle
+
+        if (aspect_ratio > 1.25) {
+          previous_character_type = 1;
+          previous_character = character;
+          previous_character_it = it;
+        } else {
+          previous_character_type = 0;
+        }
+      }
+    }
+    std::cout << std::endl;
+  }
 
   // Get each line
   // for (auto &line : this->lines) {
@@ -340,7 +391,8 @@ Renderform::Characters Renderform::Partitioner::getCharacters() {
   //   group_index++;
   //   std::sort(
   //       group.begin(), group.end(),
-  //       [](const Renderform::Character &a, const Renderform::Character &b) {
+  //       [](const Renderform::Character &a, const Renderform::Character &b)
+  //       {
   //         return a.getCenter().x < b.getCenter().x;
   //       });
   //   std::cout << "Group " << group_index << " has " << group.size()
@@ -350,7 +402,8 @@ Renderform::Characters Renderform::Partitioner::getCharacters() {
   //   int min_y = 99999;
   //   int max_y = 0;
   //   for (auto &character : group) {
-  //     std::cout << character.getCenter().x << " " << character.getCenter().y
+  //     std::cout << character.getCenter().x << " " <<
+  //     character.getCenter().y
   //               << std::endl;
   //     if (character.getCenter().x < min_x) {
   //       min_x = character.getTopLeft().x;

@@ -20,8 +20,6 @@ image
 
 #include "cleaner.hpp"
 #include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/photo.hpp>
 
 Renderform::Cleaner::Cleaner(cv::Mat *image) : source_image(image) {
   this->processed_image = cv::Mat{};
@@ -202,19 +200,7 @@ void Renderform::Cleaner::process() {
   // get both horizontal and vertical lines
   cv::scaleAdd(horizontal_lines, 0.5, vertical_lines, background);
 
-  // cv::threshold(background, background, 220, 255,
-  //               cv::THRESH_BINARY | cv::THRESH_OTSU);
-  // cv::bitwise_not(background, background);
-
-  // cv::imshow("Background", background);
-  // cv::waitKey(0);
-
   cv::subtract(horizontal_lines, this->processed_image, foreground);
-  // cv::subtract(foreground, background, foreground);
-  // cv::subtract(foreground, , foreground);
-
-  // cv::subtract(horizontal_lines, this->processed_image, foreground);
-  // cv::subtract(vertical_lines, foreground, foreground);
 
   /* Step 3: Threshold the image. */
   cv::threshold(foreground, this->processed_image, 60, 255,
@@ -222,22 +208,14 @@ void Renderform::Cleaner::process() {
 
   cv::subtract(background, this->processed_image, this->processed_image);
 
-  // cv::GaussianBlur(foreground, foreground, cv::Size(13, 13), 1);
   cv::Mat border_strengthen =
       cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
   cv::dilate(this->processed_image, this->processed_image, border_strengthen,
              cv::Point(-1, -1), 1);
 
-  // cv::Mat foreground_edges;
-  // cv::Canny(foreground, foreground_edges, 100, 200);
-
-  // cv::imshow("Foreground", foreground);
+  // @debug [show processed image]
   cv::imshow("Foreground", this->processed_image);
   cv::waitKey(0);
-
-  // cv::adaptiveThreshold(this->processed_image, this->processed_image, 255,
-  //                       cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 39,
-  //                       13);
 }
 
 const cv::Mat Renderform::Cleaner::getProcessedImage() {
