@@ -48,3 +48,4 @@ compile_commands.json
 
 # Training data
 data/training/
+data/KNN.xml
