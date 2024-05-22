@@ -35,9 +35,6 @@ include_directories(${LEPTONICA_INCLUDE_DIRS})
 link_directories(${TESSERACT_LIBRARY_DIRS})
 link_directories(${LEPTONICA_LIBRARY_DIRS})
 
-# Demo implementations
-add_subdirectory(old-demo)
-
 # New active work
 add_subdirectory(src)
 
