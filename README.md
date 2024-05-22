@@ -33,9 +33,13 @@ Renderform is a handwritten mathematical formula recognition system that process
 - In progress: Generate an image of the LaTeX-rendered equation (not yet implemented); using https://latex2image.joeraut.com/ for now to visualize the LaTeX code
 
 ## Demo
+1+1=2
 ![Demo 1: 1+1=2](/data/demo/1+1=2.png)
+5*2=y
 ![Demo 2: 5*2=y](/data/demo/5*2=y.png)
+7+9=3x
 ![Demo 3: 7+9=3x](/data/demo/7+9=3x.png)
+s(p) - untrained symbols (s, p)
 ![Demo 4: s(p)](/data/demo/s(p).png)
 
 ## Usage
