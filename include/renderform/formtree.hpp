@@ -21,32 +21,36 @@ enum class Operator {
   POWER,
   ROOT,
   BASE,
-  // RADICAL,
-  //
-  // MOD,
-  // SUM,
-  // PRODUCT,
-  // LOG,
-  // LN,
-  // SIN,
-  // COS,
-  // TAN,
-  // FACTORIAL,
+  FACTORIAL,
+};
+
+/* @future Implement these functions */
+enum class unused_Function {
+  SIN,
+  COS,
+  TAN,
+  ASIN,
+  ACOS,
+  ATAN,
+  SINH,
+  COSH,
+  TANH,
+  ASINH,
+  ACOSH,
+  ATANH,
+  LOG,
+  LN,
+  SQRT,
+  CBRT,
+  ABS,
+  EXP,
 };
 
 enum class NodeType { OPERATOR, NUMBER, VARIABLE, FUNCTION };
 
-// struct OperatorNew {
-//   std::string op;
-//   int precedence;
-//   bool rightAssociative;
-//   OperatorNew(std::string op, int precedence, bool rightAssociative)
-//       : op(op), precedence(precedence), rightAssociative(rightAssociative) {}
-// };
-
 struct NodeOperator {
   Operator op;
-  // allow std::cout to print the value
+  // Allow std::cout to print the value
   friend std::ostream &operator<<(std::ostream &os, const NodeOperator &op) {
     switch (op.op) {
     case Operator::EQUAL:
@@ -72,6 +76,9 @@ struct NodeOperator {
       break;
     case Operator::BASE:
       os << "_";
+      break;
+    case Operator::FACTORIAL:
+      os << "!";
       break;
     }
     return os;

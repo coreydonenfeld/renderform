@@ -1,6 +1,8 @@
 // CLI entry-point
 // Uses the public API via the CLI
 
+#include "classifiers/knn.hpp"
+#include "classifiers/symbols.hpp"
 #include "formula.hpp"
 #include "modules/recognizer.hpp"
 #include "renderform.hpp"
@@ -18,10 +20,6 @@ int main(int argc, char *argv[]) {
     std::cout << std::endl;
     return 0;
   }
-
-  std::cout << "Training k-NN model..." << std::endl;
-  Renderform::Recognizer recognizer;
-  return 0;
 
   std::string user_input;
   bool running = true;
@@ -57,7 +55,17 @@ int main(int argc, char *argv[]) {
         std::cout << std::endl << "Parsed formula: " << std::endl;
         parsed_formula.print();
         std::cout << std::endl;
+        std::cout << "LaTeX: " << parsed_formula.getLaTeX() << std::endl;
       }
+    } else if (user_input == "train") {
+      std::cout << "Training k-NN model..." << std::endl;
+      auto dataSet = Renderform::Classifier::extractAndTrainClassifierImages();
+      dataSet->setTrainTestSplitRatio(0.75, true);
+      Renderform::Classifier::trainKnn(dataSet);
+      float knnError = Renderform::Classifier::testKnn(dataSet);
+      std::cout << "KNN error: " << knnError << std::endl;
+    } else if (user_input == "q" || user_input == "exit") {
+      running = false;
     } else {
       std::cout << "Invalid input. Please try again." << std::endl;
       continue;

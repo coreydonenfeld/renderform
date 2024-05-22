@@ -1,5 +1,4 @@
 /*
-
 Need to take an input image and clean it up before getting each character.
 
 At an abstract level it is a matter of separating the foreground from the
@@ -19,7 +18,6 @@ image
 */
 
 #include "cleaner.hpp"
-#include <opencv2/core.hpp>
 
 Renderform::Cleaner::Cleaner(cv::Mat *image) : source_image(image) {
   this->processed_image = cv::Mat{};
@@ -101,13 +99,6 @@ void Renderform::Cleaner::process() {
     }
   }
 
-  // std::cout << "Brightest: " << brightest << std::endl;
-  // std::cout << "Darkest: " << darkest << std::endl;
-  // std::cout << "Average: " << average << std::endl;
-  // std::cout << "Most used: " << most_used << std::endl;
-  // std::cout << "Most used dark: " << most_used_dark << std::endl;
-  // std::cout << "Most used light: " << most_used_light << std::endl;
-
   // Define the threshold value
   int threshold_value = 110;
   cv::Mat binary_mask;
@@ -169,28 +160,7 @@ void Renderform::Cleaner::process() {
   cv::morphologyEx(this->processed_image, vertical_lines, cv::MORPH_CLOSE,
                    structuring_element_vertical, cv::Point(-1, -1), 2);
 
-  // cv::Mat structuring_element_horizontal_2 =
-  //     cv::getStructuringElement(cv::MORPH_RECT, cv::Size(61, 5));
-  // cv::morphologyEx(horizontal_lines, horizontal_lines, cv::MORPH_CLOSE,
-  //                  structuring_element_horizontal_2, cv::Point(-1, -1), 4);
-
-  // cv::adaptiveThreshold(horizontal_lines, horizontal_lines, 255,
-  //                       cv::ADAPTIVE_THRESH_MEAN_C, cv::THRESH_BINARY, 53,
-  //                       13);
-
-  // cv::GaussianBlur(horizontal_lines, horizontal_lines, cv::Size(13, 13), 1);
-
-  // cv::erode(horizontal_lines, horizontal_lines,
-  // structuring_element_horizontal,
-  //           cv::Point(-1, -1), 1);
-
   cv::Mat foreground;
-
-  // cv::imshow("Horizontal Lines", horizontal_lines);
-  // cv::waitKey(0);
-
-  // cv::imshow("Vertical Lines", vertical_lines);
-  // cv::waitKey(0);
 
   // Foreground is what is in the image that is not in the horizontal lines or
   // vertical lines
@@ -215,7 +185,7 @@ void Renderform::Cleaner::process() {
 
   // @debug [show processed image]
   cv::imshow("Foreground", this->processed_image);
-  cv::waitKey(0);
+  cv::waitKey(1);
 }
 
 const cv::Mat Renderform::Cleaner::getProcessedImage() {

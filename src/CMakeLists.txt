@@ -7,9 +7,6 @@ set(HEADER_FILES
 	modules/cleaner.hpp
 	modules/partitioner.hpp
 	modules/recognizer.hpp
-	modules/parser.hpp
-	modules/evaluator.hpp
-	modules/renderer.hpp
 	modules/character.hpp
 	classifiers/symbols.hpp
 	classifiers/knn.hpp
@@ -22,10 +19,8 @@ set(SOURCE_FILES
 	modules/cleaner.cpp
 	modules/partitioner.cpp
 	modules/recognizer.cpp
-	modules/parser.cpp
-	modules/evaluator.cpp
-	modules/renderer.cpp
 	modules/character.cpp
+	classifiers/symbols.cpp
 	classifiers/knn.cpp
 )
 

@@ -42,7 +42,7 @@ void PrettyPrintTree(Renderform::Node *root, int depth = 0, bool end = false) {
 }
 
 void PrettyPrint(const std::string &text, int depth = 0, bool newline = true) {
-  // std::cout << depth << std::endl;
+  return; // NO DEBUGGING
   for (int i = 0; i < depth - 1; i++) {
     std::cout << "│  ";
   }
@@ -487,25 +487,66 @@ void Renderform::Formula::print() {
   // std::cout << "Tree Nodes: " << this->root->getNumNodes() << std::endl;
 }
 
-void Renderform::Formula::simplify() {
-  // Try to actually use operators to simplify the tree
+// std::string Renderform::Formula::toLaTeX() {
+//   std::string latex = "";
+//   latex += "\\documentclass{article}\n";
+//   latex += "\\usepackage{amsmath}\n";
+//   latex += "\\begin{document}\n";
+//   latex += "\\begin{equation}\n";
+//   auto iterator = this->root;
+// }
 
-  // Node *iterated = this->root;
-  // while (iterated != nullptr) {
-  //   if (iterated->type == NodeType::OPERATOR) {
-  //     NodeOperator *op = &iterated->value.op;
-  //     if (op->op == Operator::MULTIPLY) {
-  //       // Check if both sides are numbers
-  //       if (iterated->left->type == NodeType::NUMBER &&
-  //           iterated->right->type == NodeType::NUMBER) {
-  //         double result = iterated->left->value * iterated->right->value;
-  //         iterated->type = NodeType::NUMBER;
-  //         iterated->value = result;
-  //         iterated->left = nullptr;
-  //         iterated->right = nullptr;
-  //       }
-  //     }
-  //   }
-  //   iterated = iterated->left;
-  // }
+std::string Renderform::Formula::getLaTeX() { return getLaTeX(root); }
+
+std::string Renderform::Formula::getLaTeX(Node *node) {
+  if (!node)
+    return "";
+
+  switch (node->type) {
+  case NodeType::OPERATOR: {
+    NodeOperator op = std::get<NodeOperator>(node->value);
+    std::string left = getLaTeX(node->left);
+    std::string right = getLaTeX(node->right);
+
+    switch (op.op) {
+    case Operator::EQUAL:
+      return left + " = " + right;
+    case Operator::ADD:
+      return left + " + " + right;
+    case Operator::SUBTRACT:
+      return left + " - " + right;
+    case Operator::MULTIPLY:
+      return left + " \\cdot " + right;
+    case Operator::DIVIDE:
+      return "\\frac{" + left + "}{" + right + "}";
+    case Operator::POWER:
+      return left + "^{" + right + "}";
+    case Operator::ROOT:
+      return "\\sqrt{" + right + "}";
+    case Operator::FACTORIAL:
+      return left + "!";
+    default:
+      return "";
+    }
+  }
+  case NodeType::NUMBER: {
+    NodeNumber num = std::get<NodeNumber>(node->value);
+
+    // do not include .0000 in output
+    if (num.value == (int)num.value)
+      return std::to_string((int)num.value);
+    else
+      return std::to_string(num.value);
+  }
+  case NodeType::VARIABLE: {
+    NodeVariable var = std::get<NodeVariable>(node->value);
+    return var.value;
+  }
+  case NodeType::FUNCTION: {
+    NodeFunction func = std::get<NodeFunction>(node->value);
+    return func.name + "(" + getLaTeX(node->left) + ")";
+  }
+  default:
+    return "";
+  }
 }

@@ -1,6 +1,9 @@
 #ifndef RENDERFORM_CLASSIFIER_SYMBOLS_HPP
 #define RENDERFORM_CLASSIFIER_SYMBOLS_HPP
 
+#include <string>
+#include <utility>
+
 namespace Renderform {
 
 // 0. DIGITS (0-9)
@@ -84,6 +87,8 @@ PROOFS - exists, forall, etc.
 TRIG - sin, cos, tan, etc.
 CALC - lim, int, sum, etc.
 */
+
+std::pair<int, std::string> getGroupAndSymbolFromNumber(int num);
 
 } // namespace Renderform
 

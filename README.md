@@ -1,5 +1,5 @@
 # Overview
-Renderform is a handwritten mathematical formula recognition system that processes images of handwritten text and parses them into recognized mathematical formulas, which can be rendered in LaTeX. The system is designed to be user-friendly and accessible, providing a simple C++ API and CLI for users to interact with. Renderform is built using C++ and OpenCV, leveraging the k-Nearest Neighbors (k-NN) classifier for character recognition.
+Renderform is a handwritten mathematical formula recognition system that processes images of handwritten text and parses them into recognized mathematical formulas, which can be rendered in LaTeX. The system is designed to be user-friendly and accessible, providing a simple C++ API and CLI for users to interact with. Renderform is built using C++ and OpenCV, leveraging the k-Nearest Neighbors (k-NN) and Support Vector Machine (SVM) classifiers for character recognition. The system also uses Tesseract OCR for additional character recognition capabilities. Renderform started as my final computer vision project and I am interesed in continuing to develop it beyond the scope of the class.
 
 ## Pipeline
 ### Image Pre-processing
@@ -30,15 +30,21 @@ Renderform is a handwritten mathematical formula recognition system that process
   - Each node has a left and right child, representing the left and right operands of the operator
 ### LaTeX Generation
 - For each equation, generate LaTeX code based on the parsed equation tree
-- In progress: Generate an image of the LaTeX-rendered equation (not yet implemented)
+- In progress: Generate an image of the LaTeX-rendered equation (not yet implemented); using https://latex2image.joeraut.com/ for now to visualize the LaTeX code
+
+## Demo
+![Demo 1: 1+1=2](/data/demo/1+1=2.png)
+![Demo 2: 5*2=y](/data/demo/5*2=y.png)
+![Demo 3: 7+9=3x](/data/demo/7+9=3x.png)
+![Demo 4: s(p)](/data/demo/s(p).png)
 
 ## Usage
 ### Dependencies
-- OpenCV 4.5.3
-- CMake 3.21.3
-- C++17
-- Tesseract OCR 4.1.1
-- Leptonica 1.80.0
+- OpenCV 4.9.0 (https://github.com/opencv/opencv)
+- CMake 3.24 (https://cmake.org/)
+- C++17 (https://en.cppreference.com/w/cpp/17)
+- Tesseract 5.3.4 (https://github.com/tesseract-ocr/tesseract)
+- Leptonica 1.84.1 (bundled with Tesseract)
 - LaTeX (optional, for rendering LaTeX code)
 ### Build from Source
 Warning: Only tested on macOS 14.4.1. This project is still in development and may not work as expected. Please use at your own risk.
@@ -67,19 +73,22 @@ int main() {
 ### CLI
 ```bash
 ./renderform <path_to_image>
+./renderform
+CLI: "image", "train", "manual"
 ```
 
-Successes
+## A Note on Character Recognition
+The recognition uses a mix of OpenCV machine learning models and Tesseract to attempt to recognize characters. It is fairly slow and unreliable, but it is a good starting point! The goal is to improve the recognition system in the future.
 
-Failures
-
-Limitations
-
-## Character Recognition
 ### k-NN Classifier (OpenCV Implementation)
 https://docs.opencv.org/4.9.0/d8/d4b/tutorial_py_knn_opencv.html
 
 k-NN is a great approach for individual character recognition but gets very slow, expensive, and is not very scalable. It proved to work nicely for most expressions but failed occasionally, yielding jumbled incorrect results. The k-NN classifier is a great starting point for this project but is not the best solution for the final product. Perhaps in the future, it would be ideal to implement a more sophisticated model, such as a Convolutional Neural Network (CNN), to improve the performance and accuracy of the character recognition system.
+
+### SVM Classifier (OpenCV Implementation)
+https://docs.opencv.org/4.x/d1/d73/tutorial_introduction_to_svm.html
+
+SVM is a more sophisticated model that could potentially improve the performance of the character recognition system. It is more complex and requires more data and training time but could yield better results. I implemented the SVM classifier but could not tune the parameters effectively to improve the performance. The SVM classifier is a great option for this project but requires more time and resources to optimize.
 
 ### Tesseract OCR
 https://tesseract-ocr.github.io/
@@ -87,62 +96,13 @@ https://tesseract-ocr.github.io/
 Tesseract OCR is a great tool for character recognition but *not* for handwritten text. It particularly fails when the input contains math symbols and expressions. The pre-trained model for English is extremely impressive yet flawed for this project's specific purposes of parsing handwritten mathematical formulas. Tesseract seemed like a great option prior to beginning the project. Unfortunately, it yielded subpar, haphazard results. A stretch goal, beyond the scope of this project in its current state, would be to train Tesseract with custom data, potentially from the MNIST database, to improve its performance.
 
 ## Inspiration & References
-https://blog.ayoungprogrammer.com/2013/01/equation-ocr-part-2-training-characters.html
-https://github.com/floneum/floneum/blob/main/models/kalosm-ocr/examples/ocr.rs
-https://github.com/stevenobadja/math_object_detection?tab=readme-ov-file
-https://arxiv.org/pdf/1003.5898
-https://groups.google.com/g/tesseract-ocr/c/lvr_xaSuSe0
-https://www.youtube.com/watch?v=a5oeEhTf6_M
-
-
-- set bounding boxes for each line, which will be an equation
-- within the line, bound each character. map it to a ASCII character
-- need to note position and size of each character, especially in relation to other characters
-	- think exponents which are raised above the x-height (in an IDEAL world)
-	- think subscript which are below the baseline
-	- things like fractions have a horizontal line that separates the numerator and denominator
-	- square roots are some characters with a character bounding them (radical sign)
-
-- start with a simple equation, like 2+2=4
-
-## characters:
-- numbers (0-9)
-- variables (a-z, A-Z)
-- decimal point (.)
-- sign (+, -)
-- equal sign (=)
-- greek letters/alphabet (α, β, γ, etc.)
-
-## operators:
-- addition (+)
-- subtraction (-)
-- multiplication (*, x, •) (two variables next to each other; e.g., AB or 2x is really A times B or 2 times x)
-- division (/, ÷) (two variables separated by a horizontal line; e.g., A/B or 2/x is really A divided by B or 2 divided by x) (fractions)
-
-- parentheses ((), [], {}) (a variable or expression inside; e.g., (x+2) is really x plus 2)
-
-- exponents (^) (a variable raised above the x-height; e.g., x^2 is really x squared)
-- square roots (√) (a radical sign with a variable inside; e.g., √x is really the square root of x)
-
-- trigonometric functions (sin, cos, tan, etc.) (a function with a variable inside; e.g., sin(x) is really the sine of x)
-- logarithms (log) (a function with a variable inside; e.g., log(x) is really the logarithm of x)
-
-- vector notation (→) (a vector with a variable inside; e.g., →x is really the vector x)
-- matrix notation ([, ]) (a matrix with variables inside; e.g., [x, y] is really the matrix x, y)
-
-
--- At this point only characters (numbers, math symbols) are present in the image we are working with
--- Segment by line, each object is assigned a line
--- Use position and character value to recognize equals, multi-digit numbers (i.e., if 1 and 2 are together with no object in between and their distance is reasonably small they can be assumed to form ‘12’)
--- Form math equation using LaTeX
--- Generate an output image! (https://github.com/goldsborough/latexpp)
-
-Get contours of each numeric character
-# of contours is a very rough tell:
-1 contour: 1, 2, 3, 5, 7
-2 contours: 0, 4, 6, 9
-3 contours: 8
-Roundness
-Angle for adjustments
-# of edges
-# of corners
+- https://blog.ayoungprogrammer.com/2013/01/equation-ocr-part-2-training-characters.html
+- https://github.com/floneum/floneum/blob/main/models/kalosm-ocr/examples/ocr.rs
+- https://github.com/stevenobadja/math_object_detection?tab=readme-ov-file
+- https://arxiv.org/pdf/1003.5898
+- https://groups.google.com/g/tesseract-ocr/c/lvr_xaSuSe0
+- https://www.youtube.com/watch?v=a5oeEhTf6_M
+- https://www.kaggle.com/datasets/xainano/handwrittenmathsymbols/data
+- https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.cpp
+- https://latex2image.joeraut.com/
+- https://github.com/zanazakaryaie/digit_classifiers

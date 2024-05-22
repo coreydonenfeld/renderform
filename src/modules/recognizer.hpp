@@ -11,13 +11,6 @@
 
 namespace Renderform {
 
-struct RecognizerResult {
-  std::string text;
-  int confidence;
-
-  cv::Rect bounding_box;
-};
-
 class Recognizer {
 public:
   Recognizer(std::string language = "eng");

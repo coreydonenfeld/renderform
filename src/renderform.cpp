@@ -3,10 +3,6 @@
 #include "modules/cleaner.hpp"
 #include "modules/partitioner.hpp"
 #include "modules/recognizer.hpp"
-#include <opencv2/highgui.hpp>
-
-// @todo maybe look into this:
-// https://github.com/opencv/opencv/blob/master/samples/dnn/text_detection.cpp
 
 Renderform::Formula Renderform::parseImage(const std::string &image_path) {
   Renderform::Formula parsed_formula;
@@ -21,15 +17,9 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
   preprocessor.process();
   cv::Mat image_binarized = preprocessor.getProcessedImage();
 
-  // cv::imshow("Binarized Image", image_binarized);
-  // cv::waitKey(0);
-
   Renderform::Partitioner partitioner{&image_binarized};
   partitioner.process();
   Renderform::Characters partitions = partitioner.getCharacters();
-
-  std::cout << "Largest character bbox"
-            << partitioner.getLargestCharacterBoundingBox() << std::endl;
 
   Renderform::Recognizer ocr;
 
@@ -57,19 +47,23 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
       // For visualization
       std::string character_text = ocr.recognize(character);
       std::cout << "Character " << line_number << ":" << character_number
-                << " guess from Knn: " << character_text << std::endl
-                << " guess from Tesseract (confidence: "
+                << "\n\tGuess from Knn: " << character_text
+                << "\n\tGuess from Tesseract (confidence: "
                 << character.getTesseractConfidence()
                 << "%): " << character.getLabelPredictedTesseract()
                 << std::endl;
 
       if (!character.getLabelDetermined().empty()) {
         line_text += character.getLabelDetermined();
-      } else if (!character.getLabelPredictedTesseract().empty()) {
+      } else if (!character.getLabelPredictedTesseract().empty() &&
+                 (character.getTesseractConfidence() >= 80 ||
+                  character.getLabelPredictedTesseract() == "+")) {
         line_text += character.getLabelPredictedTesseract();
       } else {
         line_text += character_text;
       }
+
+      // @todo Really small 0 or o or O should be treated as * (multiplication)
 
       cv::rectangle(
           image_display,
@@ -92,28 +86,25 @@ Renderform::Formula Renderform::parseImage(const std::string &image_path) {
         cv::Scalar(line_color_val % 255, (line_color_val + 128) % 255,
                    255 - line_color_val);
     cv::rectangle(image_display, top_left, bottom_right, line_color, 2);
-    // ocr.recognize(line);
     std::cout << "Line " << line_number << " has " << character_number
               << " characters" << std::endl;
+    std::cout << "---" << std::endl;
 
     lines_text.push_back(line_text);
     line_number++;
   }
 
+  std::cout << "Parsed formulas: " << std::endl;
+  std::cout << "---" << std::endl;
+
   for (int i = 0; i < lines_text.size(); i++) {
+    Renderform::Formula parsed_line(lines_text[i]);
     std::cout << "Line " << i << ": " << lines_text[i] << std::endl;
+    std::cout << "\tLatex: " << parsed_line.getLaTeX() << std::endl;
   }
 
   cv::imshow("Image display with rects", image_display);
   cv::waitKey(0);
-
-  // std::cout << "Number of characters: " << partitions.size() << std::endl;
-  // for (int i = 0; i < partitions.size(); i++) {
-  //   std::cout << "Character " << i << std::endl;
-  //   cv::imshow("Character " + std::to_string(i),
-  //   partitions[i].getComponent()); cv::waitKey(0); std::cout << "result: " <<
-  //   ocr.recognize(partitions[i]) << std::endl;
-  // }
 
   cv::destroyAllWindows();
   cv::waitKey(1);

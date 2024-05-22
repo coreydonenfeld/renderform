@@ -34,10 +34,9 @@ public:
   static bool areBracketsBalanced(const std::string &input);
   static std::string concealInnerGroup(const std::string &input);
 
-  // bool isValid();
-  void simplify();
-
   void print();
+
+  std::string getLaTeX();
 
 private:
   FormType formula_type; // not really needed! Or maybe it is?
@@ -51,10 +50,7 @@ private:
   Node *parseEquation(const std::string &equation, Node *iterator,
                       int depth = 0);
 
-  Node *parseLiteral(const std::string &literal, Node *iterator, int depth = 0);
-  Node *parseGroup(const std::string &group, Node *iterator, int depth = 0);
-  Node *parseUnary(const std::string &unary, Node *iterator, int depth = 0);
-  Node *parseBinary(const std::string &binary, Node *iterator, int depth = 0);
+  std::string getLaTeX(Node *node);
 };
 
 } // namespace Renderform

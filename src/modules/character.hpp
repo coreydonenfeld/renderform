@@ -60,19 +60,6 @@ private:
   std::string label_predicted_knn;
   double tesseract_confidence;
   double knn_confidence;
-
-  double area;
-  double aspect_ratio;
-  double compactness;
-  double eccentricity;
-  double extent;
-  double orientation;
-  double solidity;
-  double perimeter;
-  double circularity;
-  double roundness;
-  double elongation;
-  double convexity;
 };
 } // namespace Renderform
 

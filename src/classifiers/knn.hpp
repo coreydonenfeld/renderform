@@ -7,10 +7,23 @@ https://github.com/zanazakaryaie/digit_classifiers
 */
 
 #include "symbols.hpp"
+#include <algorithm>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <random>
+#include <string>
+#include <utility>
 
 namespace Renderform::Classifier {
+
+const int KNN_K = 9;
+const int IMAGE_SIZE = 32;
+
+cv::HOGDescriptor getHogDescriptor();
+
+cv::Ptr<cv::ml::TrainData> extractAndTrainClassifierImages();
+
+std::vector<cv::Mat> extractImagesFromGroup(int symbol, int maximum = -1);
 
 std::vector<cv::Mat> extractDigits(const cv::Mat &img);
 
@@ -24,15 +37,12 @@ cv::Ptr<cv::ml::TrainData> createTrainData(const std::string &imgPath);
 
 void trainKnn(const cv::Ptr<cv::ml::TrainData> &dataset);
 float testKnn(const cv::Ptr<cv::ml::TrainData> &dataset);
+std::string classifyKnn(const cv::Mat &img);
 
-// input cv::Mat image, output predicted label
-// 0-9 for digits, 10 for non-digit
-// -1 for error
-int classifyKnn(const cv::Mat &img);
-
+// SVM (@todo Move to svm.hpp file)
 void trainSVM(const cv::Ptr<cv::ml::TrainData> &dataset);
 float testSVM(const cv::Ptr<cv::ml::TrainData> &dataset);
-int classifySVM(const cv::Mat &img);
+std::string classifySVM(const cv::Mat &img);
 
 } // namespace Renderform::Classifier
 
