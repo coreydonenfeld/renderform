@@ -1,0 +1,6 @@
+[submodule "dependencies/opencv"]
+	path = dependencies/opencv
+	url = git@github.com:opencv/opencv.git
+[submodule "dependencies/tesseract"]
+	path = dependencies/tesseract
+	url = git@github.com:tesseract-ocr/tesseract.git
