@@ -11,6 +11,7 @@ set(HEADER_FILES
 	modules/evaluator.hpp
 	modules/renderer.hpp
 	modules/character.hpp
+	classifiers/symbols.hpp
 	classifiers/knn.hpp
 )
 set(SOURCE_FILES

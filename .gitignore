@@ -45,3 +45,6 @@ compile_commands.json
 
 # Zed IDE
 .zed
+
+# Training data
+data/training/

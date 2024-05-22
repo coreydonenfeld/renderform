@@ -24,9 +24,9 @@ endif()
 # OpenCV
 find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
+# add_subdirectory(dependencies/opencv)
 
 # Tesseract
-# set(CMAKE_LIBRARY_PATH "/opt/homebrew/Cellar/libarchive/3.7.2/lib")
 find_package(PkgConfig REQUIRED)
 pkg_search_module(TESSERACT REQUIRED tesseract)
 pkg_search_module(LEPTONICA REQUIRED lept)
@@ -34,6 +34,7 @@ include_directories(${TESSERACT_INCLUDE_DIRS})
 include_directories(${LEPTONICA_INCLUDE_DIRS})
 link_directories(${TESSERACT_LIBRARY_DIRS})
 link_directories(${LEPTONICA_LIBRARY_DIRS})
+# add_subdirectory(dependencies/tesseract)
 
 # New active work
 add_subdirectory(src)

@@ -8,13 +8,16 @@ Renderform::Recognizer::Recognizer(std::string language)
   TesseractAPI().SetVariable("tessedit_char_whitelist",
                              "0123456789xyzXYZ()*/+-=<>JjoO");
 
+  // need to merge all 45x45 images inside various folders into one image
+  // want to
+
   cv::Mat image = cv::imread("../data/0-9-digits.png", cv::IMREAD_COLOR);
 
-  auto dataSet = createTrainData("../data/0-9-digits.png");
+  auto dataSet = Classifier::createTrainData("../data/0-9-digits.png");
   dataSet->setTrainTestSplitRatio(0.8, true);
-  trainKnn(dataSet);
+  Classifier::trainKnn(dataSet);
   // trainSVM(dataSet);
-  float knnError = testKnn(dataSet);
+  float knnError = Classifier::testKnn(dataSet);
   std::cout << "KNN error: " << knnError << std::endl;
   // float svmError = testSVM(dataSet);
   // std::cout << "SVM error: " << svmError << std::endl;
@@ -47,7 +50,8 @@ std::string Renderform::Recognizer::recognize(Character &character) {
       character.getComponent().channels(), character.getComponent().step);
 
   std::string resultTesseract = std::string(TesseractAPI().GetUTF8Text());
-  std::string resultKnn = std::to_string(classifyKnn(classify_image));
+  std::string resultKnn =
+      std::to_string(Classifier::classifyKnn(classify_image));
 
   // Remove newlines
   resultTesseract.erase(

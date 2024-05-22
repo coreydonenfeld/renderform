@@ -2,6 +2,7 @@
 // Uses the public API via the CLI
 
 #include "formula.hpp"
+#include "modules/recognizer.hpp"
 #include "renderform.hpp"
 #include <iostream>
 #include <string>
@@ -17,6 +18,10 @@ int main(int argc, char *argv[]) {
     std::cout << std::endl;
     return 0;
   }
+
+  std::cout << "Training k-NN model..." << std::endl;
+  Renderform::Recognizer recognizer;
+  return 0;
 
   std::string user_input;
   bool running = true;

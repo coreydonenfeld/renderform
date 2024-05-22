@@ -1,17 +1,73 @@
-Overview
+# Overview
+Renderform is a handwritten mathematical formula recognition system that processes images of handwritten text and parses them into recognized mathematical formulas, which can be rendered in LaTeX. The system is designed to be user-friendly and accessible, providing a simple C++ API and CLI for users to interact with. Renderform is built using C++ and OpenCV, leveraging the k-Nearest Neighbors (k-NN) classifier for character recognition.
 
-Plan
-Need to segment code by this:
-- User-facing API (Parsemat/Parsepen/Mathic/Digiton/Parsenum/Numscribe/Identical/Mathtrace/Pentrace/Digitrace/Formulatrace/Symtrace/Numtrace/Eqntrace/Traceqn API)
-	call program with input image and get LaTeX result
-- Image Pre-processing
-- Character Recognition
-- Equation Formation
-- LaTeX Generation
-- Output Image Generation (optional?)
-- Testing
-- Tesseract Training Custom Data
+## Pipeline
+### Image Pre-processing
+- Convert image to grayscale
+- Separate paper from miscellaneous objects in the background (if applicable)
+- Remove noise
+- Isolate text from paper
+- Binary thresholding (digits are white, everything else should be black)
+### Character Partitioning
+- Segment text into individual characters (connected component labeling)
+- Assign each character a bounding box (in the image world view)
+- Normalize character size to 60x60, centering the character in the bounding box, preserving its aspect ratio, and padding 12 pixels on all sides (i.e., actual character max size is 36x36)
+- Enhance character shape/edges with morphological operations (dilation, erosion)
+### Line Segmentation
+- Order all characters top-to-bottom, left-to-right
+- Group characters into lines (formulas/expressions), ordered top-to-bottom based on the y-coordinate of the bounding box
+- Assign each line a bounding box (in the image world view)
+- Order characters within lines left-to-right
+### Character Recognition
+- Train k-NN classifier with labeled character data
+- Classify each character using the k-NN classifier
+- Map each classified character to its ASCII representation
+### Equation Parsing & Formation
+- Concatenate characters within each line to form equations
+  - Handle special cases (e.g., fractions, exponents, square roots) by using character bounding boxes and relationships to other characters in the same line
+- Parse equation using a custom parse tree (binary tree) data structure
+  - Each node in the tree represents an operator or operand (character)
+  - Each node has a left and right child, representing the left and right operands of the operator
+### LaTeX Generation
+- For each equation, generate LaTeX code based on the parsed equation tree
+- In progress: Generate an image of the LaTeX-rendered equation (not yet implemented)
 
+## Usage
+### Dependencies
+- OpenCV 4.5.3
+- CMake 3.21.3
+- C++17
+- Tesseract OCR 4.1.1
+- Leptonica 1.80.0
+- LaTeX (optional, for rendering LaTeX code)
+### Build from Source
+Warning: Only tested on macOS 14.4.1. This project is still in development and may not work as expected. Please use at your own risk.
+```bash
+mkdir build
+cd build
+cmake ..
+make
+./renderform <path_to_image>
+```
+### API
+```cpp
+#include "renderform/renderform.h"
+
+int main() {
+  Renderform::Formula output = Renderform::parseImage(input_file);
+  // Print to stdout
+  output.print();
+  // Get raw plain-text formula
+  std::string formula = output.getFormulaRaw();
+  // Get LaTeX formula
+  std::string latex = output.getFormulaLaTeX();
+  return 0;
+}
+```
+### CLI
+```bash
+./renderform <path_to_image>
+```
 
 Successes
 
@@ -19,14 +75,18 @@ Failures
 
 Limitations
 
-k-NN Classifier (OpenCV Implementation)
+## Character Recognition
+### k-NN Classifier (OpenCV Implementation)
 https://docs.opencv.org/4.9.0/d8/d4b/tutorial_py_knn_opencv.html
 
-Tesseract OCR
+k-NN is a great approach for individual character recognition but gets very slow, expensive, and is not very scalable. It proved to work nicely for most expressions but failed occasionally, yielding jumbled incorrect results. The k-NN classifier is a great starting point for this project but is not the best solution for the final product. Perhaps in the future, it would be ideal to implement a more sophisticated model, such as a Convolutional Neural Network (CNN), to improve the performance and accuracy of the character recognition system.
+
+### Tesseract OCR
 https://tesseract-ocr.github.io/
 
+Tesseract OCR is a great tool for character recognition but *not* for handwritten text. It particularly fails when the input contains math symbols and expressions. The pre-trained model for English is extremely impressive yet flawed for this project's specific purposes of parsing handwritten mathematical formulas. Tesseract seemed like a great option prior to beginning the project. Unfortunately, it yielded subpar, haphazard results. A stretch goal, beyond the scope of this project in its current state, would be to train Tesseract with custom data, potentially from the MNIST database, to improve its performance.
 
-IDEAS
+## Inspiration & References
 https://blog.ayoungprogrammer.com/2013/01/equation-ocr-part-2-training-characters.html
 https://github.com/floneum/floneum/blob/main/models/kalosm-ocr/examples/ocr.rs
 https://github.com/stevenobadja/math_object_detection?tab=readme-ov-file
@@ -34,7 +94,6 @@ https://arxiv.org/pdf/1003.5898
 https://groups.google.com/g/tesseract-ocr/c/lvr_xaSuSe0
 https://www.youtube.com/watch?v=a5oeEhTf6_M
 
-Pearson. (2020, August). Aida Calculus Math Handwriting Recognition Dataset. Retrieved [Date Retrieved] from https://www.kaggle.com/aidapearson/ocr-data.
 
 - set bounding boxes for each line, which will be an equation
 - within the line, bound each character. map it to a ASCII character

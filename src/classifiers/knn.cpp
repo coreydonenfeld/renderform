@@ -1,7 +1,6 @@
 #include "knn.hpp"
-#include <opencv2/highgui.hpp>
 
-std::vector<cv::Mat> Renderform::extractDigits(const cv::Mat &img) {
+std::vector<cv::Mat> Renderform::Classifier::extractDigits(const cv::Mat &img) {
   const int digitSize = 20;
   std::vector<cv::Mat> digits;
   digits.reserve(5000);
@@ -19,7 +18,7 @@ std::vector<cv::Mat> Renderform::extractDigits(const cv::Mat &img) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-void Renderform::deskewDigits(std::vector<cv::Mat> &digits) {
+void Renderform::Classifier::deskewDigits(std::vector<cv::Mat> &digits) {
   for (auto &digit : digits) {
     cv::Moments m = cv::moments(digit);
 
@@ -36,7 +35,8 @@ void Renderform::deskewDigits(std::vector<cv::Mat> &digits) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-cv::Mat Renderform::extractFeatures(const std::vector<cv::Mat> &digits) {
+cv::Mat
+Renderform::Classifier::extractFeatures(const std::vector<cv::Mat> &digits) {
   cv::HOGDescriptor hog(
       cv::Size(20, 20), cv::Size(8, 8), cv::Size(4, 4), cv::Size(4, 4), 9, 1,
       -1, cv::HOGDescriptor::HistogramNormType::L2Hys, 0.2, 0, 64, 0);
@@ -58,7 +58,7 @@ cv::Mat Renderform::extractFeatures(const std::vector<cv::Mat> &digits) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-cv::Mat Renderform::loadLabels() {
+cv::Mat Renderform::Classifier::loadLabels() {
   cv::Mat labels(5000, 1, CV_32SC1);
   int32_t *labelsPtr = labels.ptr<int32_t>(0);
 
@@ -71,7 +71,7 @@ cv::Mat Renderform::loadLabels() {
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 cv::Ptr<cv::ml::TrainData>
-Renderform::createTrainData(const std::string &imgPath) {
+Renderform::Classifier::createTrainData(const std::string &imgPath) {
   cv::Mat img = cv::imread(imgPath, cv::IMREAD_GRAYSCALE);
 
   auto digitImages = extractDigits(img);
@@ -88,7 +88,8 @@ Renderform::createTrainData(const std::string &imgPath) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-void Renderform::trainKnn(const cv::Ptr<cv::ml::TrainData> &dataset) {
+void Renderform::Classifier::trainKnn(
+    const cv::Ptr<cv::ml::TrainData> &dataset) {
   auto k_nearest = cv::ml::KNearest::create();
 
   k_nearest->setDefaultK(7);
@@ -101,7 +102,8 @@ void Renderform::trainKnn(const cv::Ptr<cv::ml::TrainData> &dataset) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-float Renderform::testKnn(const cv::Ptr<cv::ml::TrainData> &dataset) {
+float Renderform::Classifier::testKnn(
+    const cv::Ptr<cv::ml::TrainData> &dataset) {
   auto k_nearest = cv::ml::KNearest::load("KNN.xml");
 
   std::vector<int32_t> predictions;
@@ -110,7 +112,7 @@ float Renderform::testKnn(const cv::Ptr<cv::ml::TrainData> &dataset) {
   return error;
 }
 
-int Renderform::classifyKnn(const cv::Mat &img) {
+int Renderform::Classifier::classifyKnn(const cv::Mat &img) {
   // input cv::Mat image, output predicted label
   // 0-9 for digits, 10 for non-digit
   // -1 for error
@@ -155,7 +157,8 @@ int Renderform::classifyKnn(const cv::Mat &img) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-void Renderform::trainSVM(const cv::Ptr<cv::ml::TrainData> &dataset) {
+void Renderform::Classifier::trainSVM(
+    const cv::Ptr<cv::ml::TrainData> &dataset) {
   auto svm = cv::ml::SVM::create();
 
   svm->setKernel(
@@ -170,7 +173,8 @@ void Renderform::trainSVM(const cv::Ptr<cv::ml::TrainData> &dataset) {
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
-float Renderform::testSVM(const cv::Ptr<cv::ml::TrainData> &dataset) {
+float Renderform::Classifier::testSVM(
+    const cv::Ptr<cv::ml::TrainData> &dataset) {
   auto svm = cv::ml::SVM::load("SVM.xml");
 
   std::vector<int32_t> predictions;
@@ -179,7 +183,7 @@ float Renderform::testSVM(const cv::Ptr<cv::ml::TrainData> &dataset) {
   return error;
 }
 
-int Renderform::classifySVM(const cv::Mat &img) {
+int Renderform::Classifier::classifySVM(const cv::Mat &img) {
   auto svm = cv::ml::SVM::load("SVM.xml");
   cv::HOGDescriptor hog(
       cv::Size(20, 20), cv::Size(8, 8), cv::Size(4, 4), cv::Size(8, 8), 9, 1,
