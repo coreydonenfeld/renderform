@@ -12,16 +12,21 @@
 namespace Renderform {
 
 /*
-@see https://craftinginterpreters.com/parsing-expressions.html
+Represent a formula in a tree structure. The formula can be an expression,
+equation, inequality, or function.
 
 2 + 2 = 4
-
+Turned into a parse tree:
     =
    / \
   +   4
-  / \
-  2   2
+ / \
+2   2
 
+Each node is either an operator or a value. A value can be a number or a
+variable.
+
+@see https://craftinginterpreters.com/parsing-expressions.html
 */
 
 enum class FormType { EXPRESSION, EQUATION, INEQUALITY, FUNCTION };
@@ -46,7 +51,7 @@ private:
 
   Node *parseString(const std::string &formula, Node *iterator, int depth = 0);
   Node *parseExpression(const std::string &expression, Node *iterator,
-                        int depth = 0);
+                        int depth = 0, bool use_parentheses = false);
   Node *parseEquation(const std::string &equation, Node *iterator,
                       int depth = 0);
 

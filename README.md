@@ -33,14 +33,22 @@ Renderform is a handwritten mathematical formula recognition system that process
 - In progress: Generate an image of the LaTeX-rendered equation (not yet implemented); using https://latex2image.joeraut.com/ for now to visualize the LaTeX code
 
 ## Demo
-1+1=2
+Above each character is Tesseract's recognize character followed by a space and then the k-NN recognized character. The standard output shows each character's prediction and the end shows the formula for each line.
+
+#### 1+1=2
 ![Demo 1: 1+1=2](/data/demo/1+1=2.png)
-5*2=y
+
+#### 5*2=y
 ![Demo 2: 5*2=y](/data/demo/5*2=y.png)
-7+9=3x
+
+#### 7+9=3x
 ![Demo 3: 7+9=3x](/data/demo/7+9=3x.png)
-s(p) - untrained symbols (s, p)
+
+#### s(p) - untrained symbols (s, p)
 ![Demo 4: s(p)](/data/demo/s(p).png)
+
+#### Parse Tree to LaTeX
+![Demo 5: Parse Tree to LaTeX](/data/demo/parse-tree.png)
 
 ## Usage
 ### Dependencies
@@ -50,6 +58,9 @@ s(p) - untrained symbols (s, p)
 - Tesseract 5.3.4 (https://github.com/tesseract-ocr/tesseract)
 - Leptonica 1.84.1 (bundled with Tesseract)
 - LaTeX (optional, for rendering LaTeX code)
+## Data
+KNN.xml (pre-classified) - https://drive.google.com/file/d/1vUeZsTvAzKuYZ-wa6b5WGKZYK3MQXolJ/view?usp=sharing
+Character data - https://drive.google.com/file/d/1nvah1mQSnnk0nJhoNxKLfkCNt2icgglw/view?usp=sharing
 ### Build from Source
 Warning: Only tested on macOS 14.4.1. This project is still in development and may not work as expected. Please use at your own risk.
 ```bash

@@ -1,5 +1,4 @@
 #include "formula.hpp"
-#include <regex>
 
 void PrettyPrintTree(Renderform::Node *root, int depth = 0, bool end = false) {
   if (root == nullptr) {
@@ -36,7 +35,11 @@ void PrettyPrintTree(Renderform::Node *root, int depth = 0, bool end = false) {
     }
   }
   std::cout << " ";
-  std::cout << *root << std::endl;
+  std::cout << *root;
+  if (root->getUsesParentheses()) {
+    std::cout << " (parentheses)";
+  }
+  std::cout << std::endl;
   PrettyPrintTree(root->left, depth + 1);
   PrettyPrintTree(root->right, depth + 1, true);
 }
@@ -143,18 +146,13 @@ Doing basic things first like:
 */
 
 /*
+Formtree grammar:
 expression = literal | group | unary | binary
 literal = number | variable
 group = "(" expression ")"
 unary = "-" expression
 binary = expression operator expression
 operator = "+" | "-" | "*" | "/" | "^" | "=" | ">" | "<" | ">=" | "<=" | "!="
-
-*/
-
-/*
-Fatal error:
-(3)(2) -
 */
 
 Renderform::Node *Renderform::Formula::parseString(const std::string &formula,
@@ -191,9 +189,8 @@ Renderform::Formula::parseEquation(const std::string &equation, Node *iterator,
 
   PrettyPrint("└─ <equation>: " + equation, depth);
 
-  // Split the equation into two sides
-  // The left side is the left of the equals sign
-  // The right side is the right of the equals sign
+  /* Split the equation into two sides: left side is the left of the equals
+     sign; right side is the right of the equals sign. */
   std::string left_side = equation.substr(0, equation.find("="));
   std::string right_side = equation.substr(equation.find("=") + 1);
 
@@ -247,17 +244,16 @@ iterator->left->right->right->right = 4
 
 Renderform::Node *
 Renderform::Formula::parseExpression(const std::string &expression,
-                                     Node *iterator, int depth) {
+                                     Node *iterator, int depth,
+                                     bool use_parentheses) {
   std::string expression_outer =
       Renderform::Formula::concealInnerGroup(expression);
 
   if (expression != expression_outer) {
     PrettyPrint("(Outer expression groups hidden): " + expression_outer, depth);
 
-    /*
-    if outer has multiple () () following each other, then we need to treat it
-    as multiplication implicitly e.g., (3)(2) = (3)*(2)
-    */
+    /* If outer has multiple () () following each other, then we need to treat
+       it as multiplication implicitly e.g., (3)(2) = (3)*(2). */
     std::regex multiple_brackets_regex("\\)\\(");
     if (std::regex_search(expression, multiple_brackets_regex)) {
       std::string expression_outer_concealed =
@@ -268,15 +264,10 @@ Renderform::Formula::parseExpression(const std::string &expression,
 
   Node *expr = nullptr;
 
-  /*
-  Need to determine if expression is only a variable/number (literal)
-  or if it is a group (parentheses), unary (negative), or binary (operator)
-  */
-
-  /*
-  Use regex to determine if the expression is a literal, group, unary, or
-  binary
-  */
+  /* Need to determine if expression is only a variable/number (literal)
+     or if it is a group (parentheses), unary (negative), or binary (operator).
+     Use regex to determine if the expression is a literal, group, unary, or
+     binary. */
   std::regex literal_regex("^[a-zA-Z0-9]+$");
   std::regex group_regex("^\\(.*\\)$");
   std::regex unary_regex("^-.+$");
@@ -315,9 +306,7 @@ Renderform::Formula::parseExpression(const std::string &expression,
     // The left side is the left of the operator
     // The right side is the right of the operator
     // Recursively parse the left and right sides
-
     // Find the operator with the lowest precedence which comes first
-
     // If valid parentheses are found, replace all inner contents with nothing
     // This will allow us to parse the inner contents first
 
@@ -355,15 +344,13 @@ Renderform::Formula::parseExpression(const std::string &expression,
         operator_index = closing_bracket + 1;
 
         // insert '*' at operator_index
-        //
-        std::cout << expression.substr(0, operator_index) << std::endl;
-        std::cout << expression.substr(operator_index) << std::endl;
 
         Node *left = parseExpression(expression.substr(0, operator_index),
-                                     iterator, depth + 1);
+                                     iterator, depth + 1, true);
         Node *right = parseExpression(expression.substr(operator_index),
                                       iterator, depth + 1);
         expr = new Node{NodeType::OPERATOR, NodeOperator{Operator::MULTIPLY}};
+        expr->setUseParentheses(use_parentheses);
         expr->left = left;
         expr->right = right;
         return expr;
@@ -377,15 +364,13 @@ Renderform::Formula::parseExpression(const std::string &expression,
         operator_index = opening_bracket;
 
         // insert '*' at operator_index
-        //
-        std::cout << expression.substr(0, operator_index) << std::endl;
-        std::cout << expression.substr(operator_index) << std::endl;
 
         Node *left = parseExpression(expression.substr(0, operator_index),
                                      iterator, depth + 1);
         Node *right = parseExpression(expression.substr(operator_index),
-                                      iterator, depth + 1);
+                                      iterator, depth + 1, true);
         expr = new Node{NodeType::OPERATOR, NodeOperator{Operator::MULTIPLY}};
+        expr->setUseParentheses(use_parentheses);
         expr->left = left;
         expr->right = right;
         return expr;
@@ -408,6 +393,7 @@ Renderform::Formula::parseExpression(const std::string &expression,
 
     expr = new Node{NodeType::OPERATOR,
                     NodeOperator{expression_outer[operator_index]}};
+    expr->setUseParentheses(use_parentheses);
     expr->left = left;
     expr->right = right;
 
@@ -416,15 +402,15 @@ Renderform::Formula::parseExpression(const std::string &expression,
     // Remove outermost brackets (0, length-1)
     std::string inner_expression =
         expression.substr(1, expression.length() - 2);
-    expr = parseExpression(inner_expression, iterator, depth + 1);
+    expr = parseExpression(inner_expression, iterator, depth + 1, true);
   } else if (std::regex_match(expression, unary_regex)) {
     PrettyPrint("└─ <expression[unary]>: " + expression, depth);
 
     expr = new Node{NodeType::NUMBER, NodeNumber{std::stod(expression)}};
+    expr->setUseParentheses(use_parentheses);
   } else {
     // 2(3*x) is VALID -- 2*(3*x)
     // (3+2)2 is VALID -- (3+2)*2
-    //
     int operator_index = -1;
 
     if (expression[0] == '(') {
@@ -437,15 +423,13 @@ Renderform::Formula::parseExpression(const std::string &expression,
       operator_index = closing_bracket + 1;
 
       // insert '*' at operator_index
-      //
-      std::cout << expression.substr(0, operator_index) << std::endl;
-      std::cout << expression.substr(operator_index) << std::endl;
 
       Node *left = parseExpression(expression.substr(0, operator_index),
-                                   iterator, depth + 1);
+                                   iterator, depth + 1, true);
       Node *right = parseExpression(expression.substr(operator_index), iterator,
                                     depth + 1);
       expr = new Node{NodeType::OPERATOR, NodeOperator{Operator::MULTIPLY}};
+      expr->setUseParentheses(use_parentheses);
       expr->left = left;
       expr->right = right;
       return expr;
@@ -459,15 +443,13 @@ Renderform::Formula::parseExpression(const std::string &expression,
       operator_index = opening_bracket;
 
       // insert '*' at operator_index
-      //
-      std::cout << expression.substr(0, operator_index) << std::endl;
-      std::cout << expression.substr(operator_index) << std::endl;
 
       Node *left = parseExpression(expression.substr(0, operator_index),
                                    iterator, depth + 1);
       Node *right = parseExpression(expression.substr(operator_index), iterator,
-                                    depth + 1);
+                                    depth + 1, true);
       expr = new Node{NodeType::OPERATOR, NodeOperator{Operator::MULTIPLY}};
+      expr->setUseParentheses(use_parentheses);
       expr->left = left;
       expr->right = right;
       return expr;
@@ -476,25 +458,10 @@ Renderform::Formula::parseExpression(const std::string &expression,
       return nullptr;
     }
   }
-
   return expr;
 }
 
-void Renderform::Formula::print() {
-  PrettyPrintTree(this->root);
-  // std::cout << std::endl;
-  // std::cout << "Tree Depth: " << this->root->getDepth() << std::endl;
-  // std::cout << "Tree Nodes: " << this->root->getNumNodes() << std::endl;
-}
-
-// std::string Renderform::Formula::toLaTeX() {
-//   std::string latex = "";
-//   latex += "\\documentclass{article}\n";
-//   latex += "\\usepackage{amsmath}\n";
-//   latex += "\\begin{document}\n";
-//   latex += "\\begin{equation}\n";
-//   auto iterator = this->root;
-// }
+void Renderform::Formula::print() { PrettyPrintTree(this->root); }
 
 std::string Renderform::Formula::getLaTeX() { return getLaTeX(root); }
 
@@ -507,6 +474,11 @@ std::string Renderform::Formula::getLaTeX(Node *node) {
     NodeOperator op = std::get<NodeOperator>(node->value);
     std::string left = getLaTeX(node->left);
     std::string right = getLaTeX(node->right);
+
+    if (node->use_parentheses) {
+      left = "(" + left;
+      right = right + ")";
+    }
 
     switch (op.op) {
     case Operator::EQUAL:
@@ -533,14 +505,27 @@ std::string Renderform::Formula::getLaTeX(Node *node) {
     NodeNumber num = std::get<NodeNumber>(node->value);
 
     // do not include .0000 in output
-    if (num.value == (int)num.value)
-      return std::to_string((int)num.value);
-    else
-      return std::to_string(num.value);
+    if (num.value == (int)num.value) {
+      if (node->use_parentheses) {
+        return "(" + std::to_string((int)num.value) + ")";
+      } else {
+        return std::to_string((int)num.value);
+      }
+    } else {
+      if (node->use_parentheses) {
+        return "(" + std::to_string(num.value) + ")";
+      } else {
+        return std::to_string(num.value);
+      }
+    }
   }
   case NodeType::VARIABLE: {
     NodeVariable var = std::get<NodeVariable>(node->value);
-    return var.value;
+    if (node->use_parentheses) {
+      return "(" + var.value + ")";
+    } else {
+      return var.value;
+    }
   }
   case NodeType::FUNCTION: {
     NodeFunction func = std::get<NodeFunction>(node->value);

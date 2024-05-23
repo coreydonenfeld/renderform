@@ -11,7 +11,7 @@
 
 namespace Renderform {
 
-// @see https://wumbo.net/operators/
+/* @see https://wumbo.net/operators/ */
 enum class Operator {
   EQUAL,
   ADD,
@@ -24,7 +24,7 @@ enum class Operator {
   FACTORIAL,
 };
 
-/* @future Implement these functions */
+/* @future Implement these functions. Currently, they do not map to anything. */
 enum class unused_Function {
   SIN,
   COS,
@@ -46,11 +46,12 @@ enum class unused_Function {
   EXP,
 };
 
+/* The type of node in the formula tree. "FUNCTION" is unused at the moment. */
 enum class NodeType { OPERATOR, NUMBER, VARIABLE, FUNCTION };
 
 struct NodeOperator {
   Operator op;
-  // Allow std::cout to print the value
+
   friend std::ostream &operator<<(std::ostream &os, const NodeOperator &op) {
     switch (op.op) {
     case Operator::EQUAL:
@@ -108,10 +109,6 @@ struct NodeOperator {
     case '_':
       this->op = Operator::BASE;
       break;
-
-      // case "√":
-      // this->op = Operator::ROOT;
-      // break;
     }
   }
   NodeOperator(Operator op) : op(op) {}
@@ -135,7 +132,6 @@ struct NodeVariable {
 
 struct NodeFunction {
   std::string name;
-  // allow std::cout to print the value
   friend std::ostream &operator<<(std::ostream &os, const NodeFunction &func) {
     os << func.name;
     return os;
@@ -150,9 +146,16 @@ struct Node {
   NodeValue value;
   Node *left;
   Node *right;
+  bool use_parentheses;
   Node() : left(nullptr), right(nullptr) {}
   Node(NodeType type, NodeValue value)
       : type(type), value(value), left(nullptr), right(nullptr) {}
+
+  void setUseParentheses(bool do_use_parentheses) {
+    this->use_parentheses = do_use_parentheses;
+  }
+
+  bool getUsesParentheses() { return this->use_parentheses; }
 
   int getDepth() {
     if (left == nullptr && right == nullptr) {
