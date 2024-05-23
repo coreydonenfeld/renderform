@@ -58,8 +58,9 @@ Above each character is Tesseract's recognize character followed by a space and 
 - Tesseract 5.3.4 (https://github.com/tesseract-ocr/tesseract)
 - Leptonica 1.84.1 (bundled with Tesseract)
 - LaTeX (optional, for rendering LaTeX code)
-## Data
+### Data
 KNN.xml (pre-classified) - https://drive.google.com/file/d/1vUeZsTvAzKuYZ-wa6b5WGKZYK3MQXolJ/view?usp=sharing
+
 Character data - https://drive.google.com/file/d/1nvah1mQSnnk0nJhoNxKLfkCNt2icgglw/view?usp=sharing
 ### Build from Source
 Warning: Only tested on macOS 14.4.1. This project is still in development and may not work as expected. Please use at your own risk.
