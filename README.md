@@ -79,18 +79,35 @@ int main() {
   Renderform::Formula output = Renderform::parseImage(input_file);
   // Print to stdout
   output.print();
-  // Get raw plain-text formula
-  std::string formula = output.getFormulaRaw();
   // Get LaTeX formula
-  std::string latex = output.getFormulaLaTeX();
+  std::string latex = output.getLaTeX();
+  // Print LaTeX formula
+  std::cout << latex << std::endl;
   return 0;
 }
 ```
 ### CLI
+Parse and print formula from image:
 ```bash
 ./renderform <path_to_image>
+```
+General usage:
+```bash
 ./renderform
-CLI: "image", "train", "manual"
+```
+Enter mode: "image", "manual", "train"
+```bash
+> image
+> ../data/demo/1+1=2.png
+> [PROGRAM_OUTPUT]...
+> ../data/demo/5*2=y.png
+```
+```bash
+> manual
+> 1+1=2
+```
+```bash
+> train
 ```
 
 ## A Note on Character Recognition
