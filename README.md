@@ -1,4 +1,4 @@
-# Overview
+# Renderform
 Renderform is a handwritten mathematical formula recognition system that processes images of handwritten text and parses them into recognized mathematical formulas, which can be rendered in LaTeX. The system is designed to be user-friendly and accessible, providing a simple C++ API and CLI for users to interact with. Renderform is built using C++ and OpenCV, leveraging the k-Nearest Neighbors (k-NN) and Support Vector Machine (SVM) classifiers for character recognition. The system also uses Tesseract OCR for additional character recognition capabilities. Renderform started as my final computer vision project and I am interesed in continuing to develop it beyond the scope of the class.
 
 ## Pipeline
